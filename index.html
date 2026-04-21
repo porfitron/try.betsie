@@ -60,9 +60,11 @@
 
         body {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: max(env(safe-area-inset-top), 20px) 20px max(env(safe-area-inset-bottom), 20px);
+            gap: 14px;
         }
 
         .panel {
@@ -74,6 +76,36 @@
             box-shadow: var(--shadow-soft);
             backdrop-filter: blur(14px);
             padding: 28px 22px 24px;
+        }
+
+        .panel-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .panel-logo {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: #FFE1EC;
+            border: 1px solid rgba(243, 109, 111, 0.2);
+            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.14);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .site-footer {
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+            font-size: 0.73rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
         }
 
         .brand-row {
@@ -376,6 +408,12 @@
             font-size: 0.86rem;
             color: #8C2A2B;
             background: #FFF6F6;
+            text-align: center;
+        }
+
+        .banner a {
+            color: inherit;
+            text-decoration: none;
         }
 
         .modal-overlay {
@@ -428,7 +466,11 @@
     </style>
 </head>
 <body>
-    <main id="app" class="panel" aria-live="polite"></main>
+    <div class="panel-wrap">
+        <main id="app" class="panel" aria-live="polite"></main>
+        <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
+    </div>
+    <footer class="site-footer">Betsie is a trademark of Squeaky Cheese, Inc. · Site © 2026 Squeaky Cheese, Inc.</footer>
     <div id="calendar-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
         <div class="modal-card">
             <h2 id="calendar-modal-title" class="modal-title">Add to calendar</h2>
@@ -688,10 +730,12 @@
                 ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Share this accepted link back to the creator so both of you track the same countdown.</p>' : ""}
                 <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
                 <p class="subtitle"><strong>Who can see this?</strong><br>Everyone and your mom (anyone with link)</p>
-                <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Send confirmation link" : "Invite Challenger"}</button>
+                <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Send confirmation link" : "Invite challenger"}</button>
+                ${acceptedFromChallenger ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
+                ${acceptedFromChallenger ? "" : '<p class="subtitle">After sending the invitation to your friend, wait for them to send you their confirmation link.</p>'}
                 ${p2 ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
-                <div class="banner">Unlock history, streaks, and leaderboard in the iOS app.</div>
+                <div class="banner"><a href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
             document.getElementById("share-link").addEventListener("click", () => {
                 void shareCurrentLink(hasChallengerAccepted ? window.location.href : challengeShareUrl);
