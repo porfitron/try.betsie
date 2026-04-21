@@ -255,6 +255,15 @@
             word-break: break-word;
         }
 
+        .competitor-quote {
+            margin-top: 8px;
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            font-style: italic;
+            word-break: break-word;
+        }
+
         .winner-btn {
             margin-top: 10px;
             width: 100%;
@@ -347,6 +356,45 @@
             background: #FFF6F6;
         }
 
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 20;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 380px;
+            background: #FFF;
+            border-radius: 16px;
+            padding: 18px 16px 14px;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid #E5E7EB;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.05rem;
+            letter-spacing: -0.01em;
+        }
+
+        .modal-text {
+            margin: 8px 0 14px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .modal-actions {
+            display: grid;
+            gap: 8px;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -359,9 +407,22 @@
 </head>
 <body>
     <main id="app" class="panel" aria-live="polite"></main>
+    <div id="calendar-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
+        <div class="modal-card">
+            <h2 id="calendar-modal-title" class="modal-title">Add to calendar</h2>
+            <p class="modal-text">Choose where you want to save this bet reminder.</p>
+            <div class="modal-actions">
+                <button id="calendar-google" class="cta" type="button">Google Calendar</button>
+                <button id="calendar-icloud" class="ghost" type="button">iCloud / Apple Calendar</button>
+                <button id="calendar-ics" class="ghost" type="button">Download ICS file</button>
+                <button id="calendar-cancel" class="ghost" type="button">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const app = document.getElementById("app");
+        const calendarModal = document.getElementById("calendar-modal");
         const url = new URL(window.location.href);
         const params = url.searchParams;
         const mode = params.get("mode");
@@ -370,6 +431,7 @@
         const p2 = params.get("p2") || "";
         const deadline = params.get("d") || "";
         const trashTalk = params.get("tt") || "";
+        const challengerTrashTalk = params.get("ct") || "";
         const winner = params.get("w") || "";
         const source = params.get("src") || "";
 
@@ -408,13 +470,17 @@
             return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
         }
 
-        function createCalendarFile() {
+        function toIcsTime(date) {
+            return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+        }
+
+        function createCalendarFile(filename = "betsie-deadline.ics") {
             if (!title || !deadline) {
                 return;
             }
             const start = new Date(deadline);
             const end = new Date(start.getTime() + 30 * 60000);
-            const toIcsTime = (date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+            const betUrl = window.location.href;
             const ics = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
@@ -426,15 +492,40 @@
                 `DTEND:${toIcsTime(end)}`,
                 `SUMMARY:Betsie Bet: ${title}`,
                 "DESCRIPTION:Settle your bet in Betsie Lite",
+                `URL:${betUrl}`,
                 "END:VEVENT",
                 "END:VCALENDAR"
             ].join("\r\n");
             const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "betsie-deadline.ics";
+            link.download = filename;
             link.click();
             URL.revokeObjectURL(link.href);
+        }
+
+        function openGoogleCalendar() {
+            if (!title || !deadline) {
+                return;
+            }
+            const start = new Date(deadline);
+            const end = new Date(start.getTime() + 30 * 60000);
+            const betUrl = window.location.href;
+            const googleUrl = new URL("https://calendar.google.com/calendar/render");
+            googleUrl.searchParams.set("action", "TEMPLATE");
+            googleUrl.searchParams.set("text", `Betsie Bet: ${title}`);
+            googleUrl.searchParams.set("dates", `${toIcsTime(start)}/${toIcsTime(end)}`);
+            googleUrl.searchParams.set("details", `Settle your bet in Betsie Lite.\n${betUrl}`);
+            googleUrl.searchParams.set("location", betUrl);
+            window.open(googleUrl.toString(), "_blank", "noopener,noreferrer");
+        }
+
+        function openCalendarModal() {
+            calendarModal.classList.remove("is-hidden");
+        }
+
+        function closeCalendarModal() {
+            calendarModal.classList.add("is-hidden");
         }
 
         async function shareCurrentLink() {
@@ -456,6 +547,30 @@
                 alert("Challenge link copied.");
             }
         }
+
+        document.getElementById("calendar-google").addEventListener("click", () => {
+            openGoogleCalendar();
+            closeCalendarModal();
+        });
+        document.getElementById("calendar-icloud").addEventListener("click", () => {
+            createCalendarFile("betsie-deadline-apple.ics");
+            closeCalendarModal();
+        });
+        document.getElementById("calendar-ics").addEventListener("click", () => {
+            createCalendarFile();
+            closeCalendarModal();
+        });
+        document.getElementById("calendar-cancel").addEventListener("click", closeCalendarModal);
+        calendarModal.addEventListener("click", (event) => {
+            if (event.target === calendarModal) {
+                closeCalendarModal();
+            }
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !calendarModal.classList.contains("is-hidden")) {
+                closeCalendarModal();
+            }
+        });
 
         function renderLanding() {
             app.innerHTML = `
@@ -515,24 +630,28 @@
             const escapedTitle = escapeHtml(title);
             const escapedP2 = escapeHtml(p2);
             const challengerPosition = p2 ? escapedP2 : "Waiting for acceptance";
+            const escapedCreatorTrashTalk = escapeHtml(trashTalk);
+            const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             const acceptedFromChallenger = source === "accept";
+            const hasChallengerAccepted = Boolean(p2);
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
             app.innerHTML = `
                 <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Active Bet</span></div>
                 <h1>${escapedTitle || "Your Bet"}</h1>
-                ${trashTalk ? `<p class="subtitle">Trash talk: "${escapeHtml(trashTalk)}"</p>` : ""}
                 <div class="countdown" id="countdown">--</div>
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">C</div>
                         <div class="competitor-label">Creator</div>
                         <div class="competitor-position">${escapedTitle}</div>
+                        ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
                         <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Creator Won!</button>
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">CH</div>
                         <div class="competitor-label">Challenger</div>
                         <div class="competitor-position">${challengerPosition}</div>
+                        ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
                         <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Challenger Won!</button>
                     </article>
                 </section>
@@ -541,7 +660,7 @@
                 <p class="subtitle"><strong>Who can see this?</strong><br>Everyone and your mom (anyone with link)</p>
                 <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Share accepted bet link" : "Share challenge"}</button>
                 ${p2 ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
-                <button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>
+                ${hasChallengerAccepted ? `<button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
                 <div class="banner">Unlock history, streaks, and leaderboard in the iOS app.</div>
             `;
             document.getElementById("share-link").addEventListener("click", () => {
@@ -550,7 +669,9 @@
             if (!p2) {
                 document.getElementById("accept-preview").addEventListener("click", () => updateUrl("accept"));
             }
-            document.getElementById("add-calendar").addEventListener("click", createCalendarFile);
+            if (hasChallengerAccepted) {
+                document.getElementById("add-calendar").addEventListener("click", openCalendarModal);
+            }
             document.getElementById("creator-won").addEventListener("click", () => updateUrl("settle", { w: "1" }));
             document.getElementById("challenger-won").addEventListener("click", () => updateUrl("settle", { w: "2" }));
 
@@ -558,7 +679,9 @@
                 document.getElementById("creator-won").classList.toggle("is-hidden", !isVotingPeriod);
                 document.getElementById("challenger-won").classList.toggle("is-hidden", !isVotingPeriod);
                 document.getElementById("share-link").classList.toggle("is-hidden", isVotingPeriod);
-                document.getElementById("add-calendar").classList.toggle("is-hidden", isVotingPeriod);
+                if (hasChallengerAccepted) {
+                    document.getElementById("add-calendar").classList.toggle("is-hidden", isVotingPeriod);
+                }
             }
 
             const el = document.getElementById("countdown");
@@ -582,12 +705,12 @@
                 <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Challenger Flow</span></div>
                 <h1>Accept challenge</h1>
                 <p class="subtitle">Write your response to the creator's prediction. You can agree or make an alternate call.</p>
-                ${trashTalk ? `<p class="subtitle">Creator says: "${escapeHtml(trashTalk)}"</p>` : ""}
                 <div class="pill-row">
                     <div class="pill yes">Creator prediction</div>
                 </div>
                 <p class="subtitle">Your friend bet that...<br><strong>${escapeHtml(title)}</strong></p>
                 <form id="accept-form">
+                    ${trashTalk ? `<p class="subtitle">Creator says: "${escapeHtml(trashTalk)}"</p>` : ""}
                     <div>
                         <label>Your position</label>
                         <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
