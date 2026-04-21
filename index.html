@@ -601,6 +601,8 @@
         const params = url.searchParams;
         const mode = params.get("mode");
         const title = params.get("t") || "";
+        const creatorName = params.get("cn") || "";
+        const challengerName = params.get("chn") || "";
         const p1 = params.get("p1") || "For";
         const p2 = params.get("p2") || "";
         const deadline = params.get("d") || "";
@@ -636,6 +638,14 @@
                 .replaceAll('"', "&quot;");
         }
 
+        function avatarLetters(name, fallback = "") {
+            const compact = (name || fallback).trim().replace(/\s+/g, "");
+            if (!compact) {
+                return fallback.slice(0, 2).toUpperCase();
+            }
+            return compact.slice(0, 2).toUpperCase();
+        }
+
         function formatCountdown(target) {
             const remaining = new Date(target).getTime() - Date.now();
             if (remaining <= 0) {
@@ -658,6 +668,10 @@
             const start = new Date(deadline);
             const end = new Date(start.getTime() + 30 * 60000);
             const betUrl = window.location.href;
+            const escapedBetUrl = betUrl
+                .replaceAll("\\", "\\\\")
+                .replaceAll(";", "\\;")
+                .replaceAll(",", "\\,");
             const ics = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
@@ -668,7 +682,7 @@
                 `DTSTART:${toIcsTime(start)}`,
                 `DTEND:${toIcsTime(end)}`,
                 `SUMMARY:Betsie Bet: ${title}`,
-                "DESCRIPTION:Settle your bet in Betsie Lite",
+                `DESCRIPTION:Settle your bet in Betsie Lite\\n${escapedBetUrl}`,
                 `URL:${betUrl}`,
                 "END:VEVENT",
                 "END:VCALENDAR"
@@ -826,7 +840,7 @@
                     <span class="crumb-sep" aria-hidden="true">/</span>
                     <button type="button" class="crumb ${step === "confirm" ? "is-current" : step === "respond" ? "is-complete" : ""}" data-challenger-step="confirm">Confirm</button>
                     <span class="crumb-sep" aria-hidden="true">/</span>
-                    <button type="button" class="crumb ${step === "respond" ? "is-current" : ""}" data-challenger-step="respond" ${step === "respond" ? "" : "disabled"}>Active</button>
+                    <button type="button" class="crumb ${step === "respond" ? "is-current" : ""}" data-challenger-step="respond" ${step === "respond" ? "" : "disabled"}>Game On</button>
                 </nav>
             `;
         }
@@ -850,6 +864,10 @@
                 <p class="subtitle">Write a prediction, set a deadline, then share one link.</p>
                 <form id="create-form">
                     <div>
+                        <label for="creator-name">Your name</label>
+                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="Taylor">
+                    </div>
+                    <div>
                         <label for="bet-title">I bet that...</label>
                         <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="the Knicks make the playoffs this season">
                     </div>
@@ -861,13 +879,14 @@
                         <label for="bet-trash-talk">Optional trash talk</label>
                         <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one.">
                     </div>
-                    <button class="cta" type="submit">Create challenge link</button>
+                    <button class="cta" type="submit">Lock in bet</button>
                 </form>
             `;
             document.getElementById("create-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
                 updateUrl("active", {
+                    cn: form.get("creatorName"),
                     t: form.get("title"),
                     p1: "For",
                     d: form.get("deadline"),
@@ -882,6 +901,10 @@
 
         function renderActive() {
             const escapedTitle = escapeHtml(title);
+            const escapedCreatorName = escapeHtml(creatorName || "Creator");
+            const escapedChallengerName = escapeHtml(challengerName || "Challenger");
+            const creatorAvatar = avatarLetters(creatorName, "Creator");
+            const challengerAvatar = avatarLetters(challengerName, "Challenger");
             const escapedP2 = escapeHtml(p2);
             const challengerPosition = p2 ? escapedP2 : "Waiting for acceptance";
             const escapedCreatorTrashTalk = escapeHtml(trashTalk);
@@ -914,21 +937,21 @@
                 <div class="countdown" id="countdown">--</div>
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
-                        <div class="avatar creator" aria-hidden="true">C</div>
-                        <div class="competitor-label">Creator</div>
+                        <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
+                        <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapedTitle}</div>
                         ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
                         <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Creator Won!</button>
                     </article>
                     <article class="competitor">
-                        <div class="avatar challenger" aria-hidden="true">CH</div>
-                        <div class="competitor-label">Challenger</div>
+                        <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
+                        <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
                         ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
                         <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Challenger Won!</button>
                     </article>
                 </section>
-                ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Share this accepted link back to the creator so both of you track the same countdown.</p>' : ""}
+                ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 ${isCreatorView ? '<p class="subtitle"><strong>Confirm:</strong> Review your bet details, then invite your challenger.</p>' : ""}
                 <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
@@ -1002,6 +1025,10 @@
                 <form id="accept-form">
                     ${trashTalk ? `<p class="subtitle">Creator says: "${escapeHtml(trashTalk)}"</p>` : ""}
                     <div>
+                        <label for="challenger-name">Your name</label>
+                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="Jordan">
+                    </div>
+                    <div>
                         <label>Your position</label>
                         <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
                             <button id="agree-option" class="choice active" type="button" aria-pressed="true">Agree with creator</button>
@@ -1010,7 +1037,7 @@
                         <input id="challenger-position" name="position" type="text" maxlength="100" required value="${escapeHtml(title)}" placeholder="your response prediction" disabled>
                     </div>
                     <div>
-                        <label for="challenger-trash-talk">Optional trash talk</label>
+                        <label for="challenger-trash-talk">Trash talk (optional?)</label>
                         <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="You are going down.">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
@@ -1041,6 +1068,7 @@
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
                 updateUrl("active", {
+                    chn: form.get("challengerName"),
                     p2: form.get("position") || title,
                     ct: form.get("challengerTrashTalk"),
                     src: "accept",
@@ -1052,6 +1080,10 @@
 
         function renderSettle() {
             const name = winner === "1" ? "Creator" : winner === "2" ? "Challenger" : "";
+            const escapedCreatorName = escapeHtml(creatorName || "Creator");
+            const escapedChallengerName = escapeHtml(challengerName || "Challenger");
+            const creatorAvatar = avatarLetters(creatorName, "Creator");
+            const challengerAvatar = avatarLetters(challengerName, "Challenger");
             app.innerHTML = `
                 <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Settlement</span></div>
                 <h1>${name ? `${name} wins this round` : "Deadline reached"}</h1>
@@ -1059,13 +1091,13 @@
                 ${trashTalk ? `<p class="subtitle">Talk before the bet: "${escapeHtml(trashTalk)}"</p>` : ""}
                 <section class="matchup" aria-label="Final head to head">
                     <article class="competitor">
-                        <div class="avatar creator" aria-hidden="true">C</div>
-                        <div class="competitor-label">Creator</div>
+                        <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
+                        <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">I bet that...<br>${escapeHtml(title || "-")}</div>
                     </article>
                     <article class="competitor">
-                        <div class="avatar challenger" aria-hidden="true">CH</div>
-                        <div class="competitor-label">Challenger</div>
+                        <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
+                        <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
                     </article>
                 </section>
