@@ -785,14 +785,14 @@
                 <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Send confirmation link" : "Invite challenger"}</button>
                 ${acceptedFromChallenger ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${acceptedFromChallenger ? "" : '<p class="subtitle">After sending the invitation to your friend, wait for them to send you their confirmation link.</p>'}
-                ${p2 ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
+                ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
                 <div class="banner"><a href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
             document.getElementById("share-link").addEventListener("click", () => {
                 void shareCurrentLink(hasChallengerAccepted ? window.location.href : challengeShareUrl);
             });
-            if (!p2) {
+            if (!p2 && !votingPeriod) {
                 document.getElementById("accept-preview").addEventListener("click", () => updateUrl("accept"));
             }
             if (hasChallengerAccepted) {
