@@ -87,7 +87,7 @@
         .panel-logo {
             position: absolute;
             top: 12px;
-            right: 12px;
+            left: 12px;
             width: 52px;
             height: 52px;
             border-radius: 14px;
@@ -102,7 +102,7 @@
         .logo-button {
             position: absolute;
             top: 12px;
-            right: 12px;
+            left: 12px;
             border: 0;
             padding: 0;
             background: transparent;
@@ -125,14 +125,15 @@
         }
 
         .brand-row {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 10px;
             padding: 7px 12px;
             background: var(--surface);
             border-radius: 999px;
             user-select: none;
-            margin-bottom: 18px;
+            width: fit-content;
+            margin: 0 auto 18px;
         }
 
         .brand-dot {
@@ -156,6 +157,7 @@
             font-size: clamp(1.5rem, 5.4vw, 1.9rem);
             line-height: 1.15;
             letter-spacing: -0.02em;
+            text-align: center;
         }
 
         .subtitle {
