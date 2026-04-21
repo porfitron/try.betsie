@@ -75,19 +75,19 @@
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-soft);
             backdrop-filter: blur(14px);
-            padding: 36px 22px 24px;
+            padding: 30px 22px 24px;
         }
 
-        .panel-wrap {
-            position: relative;
+        .site-header {
             width: 100%;
             max-width: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
 
         .panel-logo {
-            position: absolute;
-            top: 12px;
-            left: 12px;
             width: 52px;
             height: 52px;
             border-radius: 14px;
@@ -100,14 +100,27 @@
         }
 
         .logo-button {
-            position: absolute;
-            top: 12px;
-            left: 12px;
             border: 0;
             padding: 0;
             background: transparent;
             border-radius: 14px;
-            z-index: 2;
+            display: inline-flex;
+        }
+
+        .header-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-brand-label {
+            margin: 0;
+            font-size: 0.9rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-secondary);
+            white-space: nowrap;
         }
 
         .logo-button:focus-visible {
@@ -136,6 +149,51 @@
             margin: 0 auto 18px;
         }
 
+        .creator-breadcrumb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0 0 16px;
+            flex-wrap: wrap;
+        }
+
+        .crumb {
+            border: 1px solid #E5E7EB;
+            background: #FFF;
+            color: var(--text-secondary);
+            border-radius: 999px;
+            min-height: 34px;
+            padding: 0 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .crumb.is-current {
+            border-color: rgba(243, 109, 111, 0.7);
+            background: rgba(243, 109, 111, 0.1);
+            color: #8C2A2B;
+        }
+
+        .crumb.is-complete {
+            color: var(--text-primary);
+            border-color: #D1D5DB;
+        }
+
+        .crumb:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .crumb-sep {
+            color: #9CA3AF;
+            font-size: 0.78rem;
+            user-select: none;
+        }
+
         .brand-dot {
             width: 10px;
             height: 10px;
@@ -158,6 +216,15 @@
             line-height: 1.15;
             letter-spacing: -0.02em;
             text-align: center;
+        }
+
+        .value-prop {
+            margin: 0;
+            font-size: clamp(0.95rem, 3.7vw, 1.1rem);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            text-align: right;
+            max-width: 280px;
         }
 
         .subtitle {
@@ -481,15 +548,27 @@
                 scroll-behavior: auto !important;
             }
         }
+
+        @media (max-width: 600px) {
+            .value-prop {
+                max-width: 220px;
+                text-align: right;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="panel-wrap">
-        <main id="app" class="panel" aria-live="polite"></main>
-        <button id="logo-button" class="logo-button" type="button" aria-label="Open start fresh options">
-            <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
-        </button>
-    </div>
+    <header class="site-header">
+        <div class="header-brand">
+            <button id="logo-button" class="logo-button" type="button" aria-label="Open start fresh options">
+                <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
+            </button>
+            <p class="header-brand-label">Betsie Lite</p>
+        </div>
+        <p class="value-prop">Create a friendly bet<br>in under a minute.</p>
+    </header>
+    <main id="app" class="panel" aria-live="polite"></main>
     <footer class="site-footer">Betsie is a trademark of Squeaky Cheese, Inc.</footer>
     <div id="fresh-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="fresh-modal-title">
         <div class="modal-card">
@@ -529,6 +608,9 @@
         const challengerTrashTalk = params.get("ct") || "";
         const winner = params.get("w") || "";
         const source = params.get("src") || "";
+        const creatorStep = params.get("cs") || "";
+        const invited = params.get("inv") || "";
+        const challengerResponded = params.get("cr") || "";
 
         function updateUrl(nextMode, data = {}) {
             const next = new URL(window.location.href);
@@ -690,11 +772,7 @@
 
         function renderLanding() {
             app.innerHTML = `
-                <div class="brand-row" aria-hidden="true">
-                    <span class="brand-dot"></span>
-                    <span class="brand-label">Betsie Lite</span>
-                </div>
-                <h1>Create a friendly bet in under a minute.</h1>
+                <h1>How Betsie Lite works</h1>
                 <p class="subtitle">Challenge a friend, pass each other links, and keep the vibes competitive. No account needed.</p>
                 <section class="list" aria-label="Betsie highlights">
                     <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, side, and deadline.</div>
@@ -707,10 +785,67 @@
             document.getElementById("start-bet").addEventListener("click", () => updateUrl("create"));
         }
 
+        function renderCreatorBreadcrumb(step, allowForwardNav = false) {
+            const order = ["create", "confirm", "invite"];
+            const currentIndex = order.indexOf(step);
+            const canVisit = (target) => {
+                const targetIndex = order.indexOf(target);
+                return targetIndex <= currentIndex || allowForwardNav;
+            };
+            return `
+                <nav class="creator-breadcrumb" aria-label="Creator progress">
+                    <button type="button" class="crumb ${step === "create" ? "is-current" : currentIndex > 0 ? "is-complete" : ""}" data-creator-step="create" ${canVisit("create") ? "" : "disabled"}>Create</button>
+                    <span class="crumb-sep" aria-hidden="true">/</span>
+                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : currentIndex > 1 ? "is-complete" : ""}" data-creator-step="confirm" ${canVisit("confirm") ? "" : "disabled"}>Confirm</button>
+                    <span class="crumb-sep" aria-hidden="true">/</span>
+                    <button type="button" class="crumb ${step === "invite" ? "is-current" : ""}" data-creator-step="invite" ${canVisit("invite") ? "" : "disabled"}>Invite</button>
+                </nav>
+            `;
+        }
+
+        function bindCreatorBreadcrumb() {
+            document.querySelectorAll("[data-creator-step]").forEach((node) => {
+                node.addEventListener("click", (event) => {
+                    const nextStep = event.currentTarget.getAttribute("data-creator-step");
+                    if (nextStep === "create") {
+                        updateUrl("create");
+                        return;
+                    }
+                    if (nextStep === "invite" && invited !== "1") {
+                        return;
+                    }
+                    updateUrl("active", { cs: nextStep, inv: invited });
+                });
+            });
+        }
+
+        function renderChallengerBreadcrumb(step) {
+            return `
+                <nav class="creator-breadcrumb" aria-label="Challenger progress">
+                    <button type="button" class="crumb ${step === "accept" ? "is-current" : "is-complete"}" data-challenger-step="accept" ${step === "accept" ? "" : "disabled"}>Accept</button>
+                    <span class="crumb-sep" aria-hidden="true">/</span>
+                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : step === "respond" ? "is-complete" : ""}" data-challenger-step="confirm">Confirm</button>
+                    <span class="crumb-sep" aria-hidden="true">/</span>
+                    <button type="button" class="crumb ${step === "respond" ? "is-current" : ""}" data-challenger-step="respond" ${step === "respond" ? "" : "disabled"}>Active</button>
+                </nav>
+            `;
+        }
+
+        function bindChallengerBreadcrumb() {
+            document.querySelectorAll("[data-challenger-step]").forEach((node) => {
+                node.addEventListener("click", (event) => {
+                    const nextStep = event.currentTarget.getAttribute("data-challenger-step");
+                    if (nextStep === "confirm") {
+                        updateUrl("active", { src: "accept", cr: challengerResponded });
+                    }
+                });
+            });
+        }
+
         function renderCreate() {
             const defaultDate = new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
             app.innerHTML = `
-                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Creator Flow</span></div>
+                ${renderCreatorBreadcrumb("create")}
                 <h1>Create your challenge</h1>
                 <p class="subtitle">Write a prediction, set a deadline, then share one link.</p>
                 <form id="create-form">
@@ -737,9 +872,12 @@
                     p1: "For",
                     d: form.get("deadline"),
                     tt: form.get("trashTalk"),
-                    p2: ""
+                    p2: "",
+                    cs: "confirm",
+                    inv: ""
                 });
             });
+            bindCreatorBreadcrumb();
         }
 
         function renderActive() {
@@ -750,17 +888,28 @@
             const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             const acceptedFromChallenger = source === "accept";
             const hasChallengerAccepted = Boolean(p2);
+            const isCreatorView = !acceptedFromChallenger;
+            const hasInvitedChallenger = invited === "1";
+            const flowStep = hasChallengerAccepted || hasInvitedChallenger ? "invite" : "confirm";
+            const inviteButtonText = hasInvitedChallenger ? "Remind challenger" : "Invite challenger";
+            const inviteButtonClass = hasInvitedChallenger ? "ghost" : "cta";
+            const hasChallengerSentConfirmation = challengerResponded === "1";
+            const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
+            const challengerButtonText = hasChallengerSentConfirmation ? "Active bet link" : "Send confirmation link";
+            const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
                 shareUrl.searchParams.set("mode", "accept");
                 shareUrl.searchParams.delete("p2");
                 shareUrl.searchParams.delete("src");
                 shareUrl.searchParams.delete("w");
+                shareUrl.searchParams.delete("cs");
+                shareUrl.searchParams.delete("inv");
                 return shareUrl.toString();
             })();
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
             app.innerHTML = `
-                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Active Bet</span></div>
+                ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
                 <section class="matchup" aria-label="Head to head positions">
@@ -780,19 +929,29 @@
                     </article>
                 </section>
                 ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Share this accepted link back to the creator so both of you track the same countdown.</p>' : ""}
+                ${isCreatorView ? '<p class="subtitle"><strong>Confirm:</strong> Review your bet details, then invite your challenger.</p>' : ""}
                 <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
-                <p class="subtitle"><strong>Who can see this?</strong><br>Everyone and your mom (anyone with link)</p>
-                <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Send confirmation link" : "Invite challenger"}</button>
+                <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
+                <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
                 ${acceptedFromChallenger ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${acceptedFromChallenger ? "" : '<p class="subtitle">After sending the invitation to your friend, wait for them to send you their confirmation link.</p>'}
                 ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
                 <div class="banner"><a href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
-            document.getElementById("share-link").addEventListener("click", () => {
-                void shareCurrentLink(hasChallengerAccepted ? window.location.href : challengeShareUrl);
-            });
-            if (!p2 && !votingPeriod) {
+            if (document.getElementById("share-link")) {
+                document.getElementById("share-link").addEventListener("click", async () => {
+                    await shareCurrentLink(hasChallengerAccepted ? window.location.href : challengeShareUrl);
+                    if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
+                        updateUrl("active", { inv: "1", cs: "confirm" });
+                        return;
+                    }
+                    if (!isCreatorView && !hasChallengerSentConfirmation) {
+                        updateUrl("active", { src: "accept", cr: "1" });
+                    }
+                });
+            }
+            if (!p2 && !votingPeriod && document.getElementById("accept-preview")) {
                 document.getElementById("accept-preview").addEventListener("click", () => updateUrl("accept"));
             }
             if (hasChallengerAccepted) {
@@ -800,6 +959,11 @@
             }
             document.getElementById("creator-won").addEventListener("click", () => updateUrl("settle", { w: "1" }));
             document.getElementById("challenger-won").addEventListener("click", () => updateUrl("settle", { w: "2" }));
+            if (isCreatorView) {
+                bindCreatorBreadcrumb();
+            } else {
+                bindChallengerBreadcrumb();
+            }
 
             function setVotingPeriod(isVotingPeriod) {
                 document.getElementById("creator-won").classList.toggle("is-hidden", !isVotingPeriod);
@@ -828,7 +992,7 @@
                 return;
             }
             app.innerHTML = `
-                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Challenger Flow</span></div>
+                ${renderChallengerBreadcrumb("accept")}
                 <h1>Accept challenge</h1>
                 <p class="subtitle">Write your response to the creator's prediction. You can agree or make an alternate call.</p>
                 <div class="pill-row">
@@ -844,6 +1008,10 @@
                             <button id="custom-option" class="choice" type="button" aria-pressed="false">Use my own prediction</button>
                         </div>
                         <input id="challenger-position" name="position" type="text" maxlength="100" required value="${escapeHtml(title)}" placeholder="your response prediction" disabled>
+                    </div>
+                    <div>
+                        <label for="challenger-trash-talk">Optional trash talk</label>
+                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="You are going down.">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
@@ -872,8 +1040,14 @@
             document.getElementById("accept-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
-                updateUrl("active", { p2: form.get("position") || title, src: "accept" });
+                updateUrl("active", {
+                    p2: form.get("position") || title,
+                    ct: form.get("challengerTrashTalk"),
+                    src: "accept",
+                    cr: ""
+                });
             });
+            bindChallengerBreadcrumb();
         }
 
         function renderSettle() {
