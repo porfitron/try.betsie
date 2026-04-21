@@ -2,52 +2,681 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Coming Soon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Betsie Lite | Start a Bet</title>
+    <meta name="description" content="Betsie Lite lets you create and share a friendly 1-on-1 bet in seconds.">
     <style>
+        :root {
+            --betsie-coral: #F36D6F;
+            --canvas-white: #FFFFFF;
+            --surface: #F8F9FA;
+            --text-primary: #1A1A1A;
+            --text-secondary: #6B7280;
+            --emerald: #10B981;
+            --ruby: #EF4444;
+            --shadow-soft: 0 12px 34px rgba(17, 24, 39, 0.12);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f9f9f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
-            color: #333;
+            min-height: 100%;
+            background: radial-gradient(circle at 12% 5%, rgba(243, 109, 111, 0.20), transparent 35%),
+                radial-gradient(circle at 90% 95%, rgba(16, 185, 129, 0.14), transparent 32%),
+                var(--canvas-white);
+            color: var(--text-primary);
+            font-family: "Avenir Next", Avenir, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(env(safe-area-inset-top), 20px) 20px max(env(safe-area-inset-bottom), 20px);
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 480px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(14px);
+            padding: 28px 22px 24px;
+        }
+
+        .brand-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 12px;
+            background: var(--surface);
+            border-radius: 999px;
+            user-select: none;
+            margin-bottom: 18px;
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--betsie-coral);
+            box-shadow: 0 0 0 4px rgba(243, 109, 111, 0.18);
+        }
+
+        .brand-label {
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.5rem, 5.4vw, 1.9rem);
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            margin: 12px 0 18px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .list {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            color: #31353f;
+        }
+
+        .item .icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--canvas-white);
+            background: linear-gradient(160deg, var(--betsie-coral), #EF4444);
+            flex-shrink: 0;
+        }
+
+        .cta,
+        .ghost {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+            margin-top: 10px;
+        }
+
+        .cta {
+            border: 0;
+            color: var(--canvas-white);
+            background: linear-gradient(160deg, #F36D6F, #E75C60);
+            box-shadow: 0 8px 20px rgba(243, 109, 111, 0.34);
+        }
+
+        .ghost {
+            border: 1px solid #E5E7EB;
+            color: var(--text-primary);
+            background: #FFF;
+        }
+
+        .cta:active,
+        .ghost:active {
+            transform: scale(0.98);
+        }
+
+        .cta:focus-visible,
+        .ghost:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 3px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
+        }
+
+        form {
+            display: grid;
+            gap: 12px;
+        }
+
+        label {
+            font-size: 0.83rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            background: #FFF;
+            padding: 0 12px;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0 6px;
+        }
+
+        .choice-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 6px 0 2px;
+        }
+
+        .matchup {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .competitor {
+            border: 1px solid #E5E7EB;
+            border-radius: 14px;
+            background: #FFF;
+            padding: 12px;
             text-align: center;
         }
-        .container {
-            padding: 2rem;
+
+        .avatar {
+            width: 46px;
+            height: 46px;
+            margin: 0 auto 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #FFF;
         }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+
+        .avatar.creator {
+            background: linear-gradient(160deg, #F36D6F, #E75C60);
         }
-        p {
-            font-size: 1.2rem;
-            color: #666;
-            margin-bottom: 2rem;
+
+        .avatar.challenger {
+            background: linear-gradient(160deg, #64748B, #334155);
         }
-        .btn {
-            display: inline-block;
-            background-color: #0070f3;
-            color: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.2s;
+
+        .competitor-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
-        .btn:hover {
-            background-color: #0051bb;
+
+        .competitor-position {
+            margin-top: 6px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .winner-btn {
+            margin-top: 10px;
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid rgba(243, 109, 111, 0.35);
+            border-radius: 10px;
+            background: rgba(243, 109, 111, 0.08);
+            color: #8C2A2B;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .winner-btn:focus-visible {
+            outline: 3px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
+        }
+
+        .is-hidden {
+            display: none !important;
+        }
+
+        .pill {
+            border-radius: 999px;
+            background: var(--surface);
+            color: #31353f;
+            font-weight: 600;
+            font-size: 0.84rem;
+            padding: 7px 12px;
+        }
+
+        .pill.yes {
+            color: var(--emerald);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .pill.no {
+            color: var(--ruby);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .choice {
+            min-height: 42px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            background: #FFF;
+            color: var(--text-primary);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .choice.active {
+            border-color: rgba(243, 109, 111, 0.7);
+            background: rgba(243, 109, 111, 0.1);
+            color: #8C2A2B;
+        }
+
+        .countdown {
+            margin: 6px 0 12px;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .meta {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+        }
+
+        .meta .dot {
+            color: #D1D5DB;
+            margin: 0 6px;
+        }
+
+        .meta strong {
+            color: var(--emerald);
+        }
+
+        .banner {
+            margin-top: 14px;
+            border: 1px dashed #F9A8A8;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 0.86rem;
+            color: #8C2A2B;
+            background: #FFF6F6;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Content coming soon</h1>
-        <p>I'm currently building something great here.</p>
-        <a href="https://betsie.app" class="btn">Visit Betsie.app in the meantime</a>
-    </div>
+    <main id="app" class="panel" aria-live="polite"></main>
+
+    <script>
+        const app = document.getElementById("app");
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+        const mode = params.get("mode");
+        const title = params.get("t") || "";
+        const p1 = params.get("p1") || "For";
+        const p2 = params.get("p2") || "";
+        const deadline = params.get("d") || "";
+        const trashTalk = params.get("tt") || "";
+        const winner = params.get("w") || "";
+        const source = params.get("src") || "";
+
+        function updateUrl(nextMode, data = {}) {
+            const next = new URL(window.location.href);
+            const nextParams = next.searchParams;
+            if (nextMode) {
+                nextParams.set("mode", nextMode);
+            }
+            Object.entries(data).forEach(([key, value]) => {
+                if (value) {
+                    nextParams.set(key, value);
+                } else {
+                    nextParams.delete(key);
+                }
+            });
+            window.location.href = next.toString();
+        }
+
+        function escapeHtml(value) {
+            return value
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;");
+        }
+
+        function formatCountdown(target) {
+            const remaining = new Date(target).getTime() - Date.now();
+            if (remaining <= 0) {
+                return "Bet Completed";
+            }
+            const hours = Math.floor(remaining / 3600000);
+            const minutes = Math.floor((remaining % 3600000) / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+        }
+
+        function createCalendarFile() {
+            if (!title || !deadline) {
+                return;
+            }
+            const start = new Date(deadline);
+            const end = new Date(start.getTime() + 30 * 60000);
+            const toIcsTime = (date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+            const ics = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//Betsie Lite//EN",
+                "BEGIN:VEVENT",
+                `UID:${Date.now()}@betsie-lite`,
+                `DTSTAMP:${toIcsTime(new Date())}`,
+                `DTSTART:${toIcsTime(start)}`,
+                `DTEND:${toIcsTime(end)}`,
+                `SUMMARY:Betsie Bet: ${title}`,
+                "DESCRIPTION:Settle your bet in Betsie Lite",
+                "END:VEVENT",
+                "END:VCALENDAR"
+            ].join("\r\n");
+            const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "betsie-deadline.ics";
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        async function shareCurrentLink() {
+            const shareData = {
+                title: "Betsie challenge",
+                text: "Take this bet with me on Betsie Lite.",
+                url: window.location.href
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    return;
+                }
+            } catch (error) {
+                // Fallback to clipboard when share is cancelled or unavailable.
+            }
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(window.location.href);
+                alert("Challenge link copied.");
+            }
+        }
+
+        function renderLanding() {
+            app.innerHTML = `
+                <div class="brand-row" aria-hidden="true">
+                    <span class="brand-dot"></span>
+                    <span class="brand-label">Betsie Lite</span>
+                </div>
+                <h1>Create a friendly bet in under a minute.</h1>
+                <p class="subtitle">Challenge a friend, share one link, and keep the vibes competitive. No account needed.</p>
+                <section class="list" aria-label="Betsie highlights">
+                    <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, side, and deadline.</div>
+                    <div class="item"><span class="icon" aria-hidden="true">2</span>Send the challenge link through iMessage or WhatsApp.</div>
+                    <div class="item"><span class="icon" aria-hidden="true">3</span>Track countdown and settle with bragging rights.</div>
+                </section>
+                <button id="start-bet" class="cta" type="button">Start your first bet</button>
+                <p class="meta">Fast setup<span class="dot">•</span>Mobile first<span class="dot">•</span><strong>Share-ready</strong></p>
+            `;
+            document.getElementById("start-bet").addEventListener("click", () => updateUrl("create"));
+        }
+
+        function renderCreate() {
+            const defaultDate = new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
+            app.innerHTML = `
+                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Creator Flow</span></div>
+                <h1>Create your challenge</h1>
+                <p class="subtitle">Write a prediction, set a deadline, then share one link.</p>
+                <form id="create-form">
+                    <div>
+                        <label for="bet-title">I bet that...</label>
+                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="the Knicks make the playoffs this season">
+                    </div>
+                    <div>
+                        <label for="bet-deadline">Deadline</label>
+                        <input id="bet-deadline" name="deadline" type="datetime-local" required value="${defaultDate}">
+                    </div>
+                    <div>
+                        <label for="bet-trash-talk">Optional trash talk</label>
+                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one.">
+                    </div>
+                    <button class="cta" type="submit">Create challenge link</button>
+                </form>
+            `;
+            document.getElementById("create-form").addEventListener("submit", (event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                updateUrl("active", {
+                    t: form.get("title"),
+                    p1: "For",
+                    d: form.get("deadline"),
+                    tt: form.get("trashTalk"),
+                    p2: ""
+                });
+            });
+        }
+
+        function renderActive() {
+            const escapedTitle = escapeHtml(title);
+            const escapedP2 = escapeHtml(p2);
+            const challengerPosition = p2 ? escapedP2 : "Waiting for acceptance";
+            const acceptedFromChallenger = source === "accept";
+            const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
+            app.innerHTML = `
+                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Active Bet</span></div>
+                <h1>${escapedTitle || "Your Bet"}</h1>
+                ${trashTalk ? `<p class="subtitle">Trash talk: "${escapeHtml(trashTalk)}"</p>` : ""}
+                <div class="countdown" id="countdown">--</div>
+                <section class="matchup" aria-label="Head to head positions">
+                    <article class="competitor">
+                        <div class="avatar creator" aria-hidden="true">C</div>
+                        <div class="competitor-label">Creator</div>
+                        <div class="competitor-position">${escapedTitle}</div>
+                        <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Creator Won!</button>
+                    </article>
+                    <article class="competitor">
+                        <div class="avatar challenger" aria-hidden="true">CH</div>
+                        <div class="competitor-label">Challenger</div>
+                        <div class="competitor-position">${challengerPosition}</div>
+                        <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Challenger Won!</button>
+                    </article>
+                </section>
+                ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Share this accepted link back to the creator so both of you track the same countdown.</p>' : ""}
+                <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
+                <p class="subtitle"><strong>Who can see this?</strong><br>Everyone and your mom (anyone with link)</p>
+                <button id="share-link" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? "Share accepted bet link" : "Share challenge"}</button>
+                ${p2 ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
+                <button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>
+                <div class="banner">Unlock history, streaks, and leaderboard in the iOS app.</div>
+            `;
+            document.getElementById("share-link").addEventListener("click", () => {
+                void shareCurrentLink();
+            });
+            if (!p2) {
+                document.getElementById("accept-preview").addEventListener("click", () => updateUrl("accept"));
+            }
+            document.getElementById("add-calendar").addEventListener("click", createCalendarFile);
+            document.getElementById("creator-won").addEventListener("click", () => updateUrl("settle", { w: "1" }));
+            document.getElementById("challenger-won").addEventListener("click", () => updateUrl("settle", { w: "2" }));
+
+            function setVotingPeriod(isVotingPeriod) {
+                document.getElementById("creator-won").classList.toggle("is-hidden", !isVotingPeriod);
+                document.getElementById("challenger-won").classList.toggle("is-hidden", !isVotingPeriod);
+                document.getElementById("share-link").classList.toggle("is-hidden", isVotingPeriod);
+                document.getElementById("add-calendar").classList.toggle("is-hidden", isVotingPeriod);
+            }
+
+            const el = document.getElementById("countdown");
+            const timer = setInterval(() => {
+                el.textContent = formatCountdown(deadline);
+                if (el.textContent === "Bet Completed") {
+                    setVotingPeriod(true);
+                    clearInterval(timer);
+                }
+            }, 1000);
+            el.textContent = formatCountdown(deadline);
+            setVotingPeriod(el.textContent === "Bet Completed");
+        }
+
+        function renderAccept() {
+            if (p2) {
+                updateUrl("active");
+                return;
+            }
+            app.innerHTML = `
+                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Challenger Flow</span></div>
+                <h1>Accept challenge</h1>
+                <p class="subtitle">Write your response to the creator's prediction. You can agree or make an alternate call.</p>
+                ${trashTalk ? `<p class="subtitle">Creator says: "${escapeHtml(trashTalk)}"</p>` : ""}
+                <div class="pill-row">
+                    <div class="pill yes">Creator prediction</div>
+                </div>
+                <p class="subtitle">Your friend bet that...<br><strong>${escapeHtml(title)}</strong></p>
+                <form id="accept-form">
+                    <div>
+                        <label>Your position</label>
+                        <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
+                            <button id="agree-option" class="choice active" type="button" aria-pressed="true">Agree with creator</button>
+                            <button id="custom-option" class="choice" type="button" aria-pressed="false">Use my own prediction</button>
+                        </div>
+                        <input id="challenger-position" name="position" type="text" maxlength="100" required value="${escapeHtml(title)}" placeholder="your response prediction" disabled>
+                    </div>
+                    <button class="cta" type="submit">Lock in bet</button>
+                </form>
+            `;
+            const agreeOption = document.getElementById("agree-option");
+            const customOption = document.getElementById("custom-option");
+            const challengerInput = document.getElementById("challenger-position");
+
+            function setMode(isAgree) {
+                agreeOption.classList.toggle("active", isAgree);
+                customOption.classList.toggle("active", !isAgree);
+                agreeOption.setAttribute("aria-pressed", String(isAgree));
+                customOption.setAttribute("aria-pressed", String(!isAgree));
+                challengerInput.disabled = isAgree;
+                challengerInput.required = !isAgree;
+                if (isAgree) {
+                    challengerInput.value = title;
+                } else if (challengerInput.value.trim() === title) {
+                    challengerInput.value = "";
+                    challengerInput.focus();
+                }
+            }
+
+            agreeOption.addEventListener("click", () => setMode(true));
+            customOption.addEventListener("click", () => setMode(false));
+            document.getElementById("accept-form").addEventListener("submit", (event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                updateUrl("active", { p2: form.get("position") || title, src: "accept" });
+            });
+        }
+
+        function renderSettle() {
+            const name = winner === "1" ? "Creator" : winner === "2" ? "Challenger" : "";
+            app.innerHTML = `
+                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Settlement</span></div>
+                <h1>${name ? `${name} wins this round` : "Deadline reached"}</h1>
+                <p class="subtitle">${title ? `Bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                ${trashTalk ? `<p class="subtitle">Talk before the bet: "${escapeHtml(trashTalk)}"</p>` : ""}
+                <section class="matchup" aria-label="Final head to head">
+                    <article class="competitor">
+                        <div class="avatar creator" aria-hidden="true">C</div>
+                        <div class="competitor-label">Creator</div>
+                        <div class="competitor-position">I bet that...<br>${escapeHtml(title || "-")}</div>
+                    </article>
+                    <article class="competitor">
+                        <div class="avatar challenger" aria-hidden="true">CH</div>
+                        <div class="competitor-label">Challenger</div>
+                        <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
+                    </article>
+                </section>
+                ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
+                <button id="share-result" class="ghost" type="button">Share result</button>
+                <button id="new-bet" class="ghost" type="button">Start new bet</button>
+                <div class="banner">Confetti coming in Phase 3. For now, claim your bragging rights.</div>
+            `;
+            if (!winner) {
+                document.getElementById("creator-wins").addEventListener("click", () => updateUrl("settle", { w: "1" }));
+                document.getElementById("challenger-wins").addEventListener("click", () => updateUrl("settle", { w: "2" }));
+            }
+            document.getElementById("share-result").addEventListener("click", () => {
+                void shareCurrentLink();
+            });
+            document.getElementById("new-bet").addEventListener("click", () => {
+                window.location.href = window.location.pathname;
+            });
+        }
+
+        const hasBetData = Boolean(title && deadline);
+        if (!mode && !hasBetData) {
+            renderLanding();
+        } else if (mode === "create") {
+            renderCreate();
+        } else if (mode === "accept" && hasBetData) {
+            renderAccept();
+        } else if (mode === "settle" && hasBetData) {
+            renderSettle();
+        } else if (hasBetData) {
+            renderActive();
+        } else {
+            renderLanding();
+        }
+    </script>
 </body>
 </html>
