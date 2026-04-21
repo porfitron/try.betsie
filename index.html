@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#F36D6F">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Betsie">
+    <meta name="apple-mobile-web-app-title" content="Betsie Lite">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
@@ -96,7 +96,23 @@
             border: 1px solid rgba(243, 109, 111, 0.2);
             box-shadow: 0 6px 16px rgba(17, 24, 39, 0.14);
             z-index: 2;
-            pointer-events: none;
+            cursor: pointer;
+        }
+
+        .logo-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 14px;
+            z-index: 2;
+        }
+
+        .logo-button:focus-visible {
+            outline: 3px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
         }
 
         .site-footer {
@@ -468,9 +484,21 @@
 <body>
     <div class="panel-wrap">
         <main id="app" class="panel" aria-live="polite"></main>
-        <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
+        <button id="logo-button" class="logo-button" type="button" aria-label="Open start fresh options">
+            <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
+        </button>
     </div>
-    <footer class="site-footer">Betsie is a trademark of Squeaky Cheese, Inc. · Site © 2026 Squeaky Cheese, Inc.</footer>
+    <footer class="site-footer">Betsie is a trademark of Squeaky Cheese, Inc.</footer>
+    <div id="fresh-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="fresh-modal-title">
+        <div class="modal-card">
+            <h2 id="fresh-modal-title" class="modal-title">Start fresh?</h2>
+            <p class="modal-text">This will clear the current bet details and bring you back to the start.</p>
+            <div class="modal-actions">
+                <button id="fresh-confirm" class="cta" type="button">Start fresh</button>
+                <button id="fresh-cancel" class="ghost" type="button">Cancel</button>
+            </div>
+        </div>
+    </div>
     <div id="calendar-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
         <div class="modal-card">
             <h2 id="calendar-modal-title" class="modal-title">Add to calendar</h2>
@@ -487,6 +515,7 @@
     <script>
         const app = document.getElementById("app");
         const calendarModal = document.getElementById("calendar-modal");
+        const freshModal = document.getElementById("fresh-modal");
         const url = new URL(window.location.href);
         const params = url.searchParams;
         const mode = params.get("mode");
@@ -592,6 +621,14 @@
             calendarModal.classList.add("is-hidden");
         }
 
+        function openFreshModal() {
+            freshModal.classList.remove("is-hidden");
+        }
+
+        function closeFreshModal() {
+            freshModal.classList.add("is-hidden");
+        }
+
         async function shareCurrentLink(shareUrl = window.location.href) {
             const shareData = {
                 title: "Betsie challenge",
@@ -630,9 +667,22 @@
                 closeCalendarModal();
             }
         });
+        document.getElementById("logo-button").addEventListener("click", openFreshModal);
+        document.getElementById("fresh-cancel").addEventListener("click", closeFreshModal);
+        document.getElementById("fresh-confirm").addEventListener("click", () => {
+            window.location.href = window.location.pathname;
+        });
+        freshModal.addEventListener("click", (event) => {
+            if (event.target === freshModal) {
+                closeFreshModal();
+            }
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !calendarModal.classList.contains("is-hidden")) {
                 closeCalendarModal();
+            }
+            if (event.key === "Escape" && !freshModal.classList.contains("is-hidden")) {
+                closeFreshModal();
             }
         });
 
