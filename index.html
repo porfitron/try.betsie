@@ -135,7 +135,7 @@
         }
 
         .panel-logo {
-            width: min(300px, 70vw);
+            width: min(150px, 35vw);
             height: auto;
             border-radius: 0;
             object-fit: contain;
@@ -690,6 +690,17 @@
             color: #166534;
         }
 
+        .add-calendar-pill {
+            border: 0;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--betsie-coral);
+        }
+
         .choice {
             min-height: 42px;
             border: 1px solid #E5E7EB;
@@ -886,6 +897,40 @@
         }
 
         .preview-accept-link:focus-visible {
+            outline: 2px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        .reshare-confirm-wrap {
+            margin: 8px 0 0;
+            text-align: center;
+        }
+
+        .reshare-confirm-link {
+            display: inline;
+            border: 0;
+            background: none;
+            padding: 0;
+            font: inherit;
+            color: var(--betsie-coral);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .reshare-confirm-link[aria-disabled="true"] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .reshare-confirm-link:not([aria-disabled="true"]):hover {
+            color: #d85a5c;
+        }
+
+        .reshare-confirm-link:focus-visible {
             outline: 2px solid rgba(243, 109, 111, 0.35);
             outline-offset: 2px;
             border-radius: 4px;
@@ -1984,7 +2029,7 @@
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
                 <p class="subtitle bet-timing-line" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
-                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="call-bet-early-link" class="pill yes call-bet-early-pill" type="button">Call the bet early</button></p>' : ""}
+                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="add-calendar-pill" class="pill add-calendar-pill" type="button">Add to calendar</button></p>' : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
@@ -2007,10 +2052,20 @@
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
-                <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button"${disableChallengerReshare ? " disabled aria-disabled=\"true\"" : ""}>${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
+                ${!acceptedFromChallenger || !hasChallengerSentConfirmation
+                    ? `<button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>`
+                    : ""}
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<p class="preview-accept-wrap"><a id="accept-preview" class="preview-accept-link" href="#">Preview what they\'ll see</a></p>'}
-                ${hasChallengerAccepted ? `<button id="add-calendar" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
+                ${hasChallengerAccepted
+                    ? `<button id="call-bet-early-cta" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Call the bet early</button>${
+                    acceptedFromChallenger && hasChallengerSentConfirmation
+                        ? disableChallengerReshare
+                            ? `<p class="reshare-confirm-wrap"><span class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link" aria-disabled="true" tabindex="-1">Re-share confirmation link</span></p>`
+                            : `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">Re-share confirmation link</button></p>`
+                        : ""
+                }`
+                    : ""}
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
             const promoLink = document.getElementById("betsie-app-promo");
@@ -2020,7 +2075,11 @@
                 });
             }
             if (document.getElementById("share-link")) {
-                document.getElementById("share-link").addEventListener("click", async () => {
+                document.getElementById("share-link").addEventListener("click", async (e) => {
+                    e.preventDefault();
+                    if (e.currentTarget.getAttribute("aria-disabled") === "true") {
+                        return;
+                    }
                     const shareUrl = hasChallengerAccepted
                         ? (acceptedFromChallenger ? confirmationShareUrl : window.location.href)
                         : challengeShareUrl;
@@ -2068,7 +2127,14 @@
                 });
             }
             if (hasChallengerAccepted) {
-                document.getElementById("add-calendar").addEventListener("click", () => {
+                document.getElementById("call-bet-early-cta").addEventListener("click", () => {
+                    trackBetsieEvent("betsie_vote", { choice: "call_early_prompt", phase: "countdown" });
+                    openEarlyEndModal();
+                });
+            }
+            const addCalendarPill = document.getElementById("add-calendar-pill");
+            if (addCalendarPill) {
+                addCalendarPill.addEventListener("click", () => {
                     trackBetsieEvent("betsie_calendar_modal", { action: "open" });
                     openCalendarModal();
                 });
@@ -2086,13 +2152,6 @@
                 noContestLink.addEventListener("click", () => {
                     trackBetsieEvent("betsie_vote", { choice: "no_contest", phase: "after_deadline" });
                     updateUrl("settle", { w: "0" });
-                });
-            }
-            const callBetEarlyLink = document.getElementById("call-bet-early-link");
-            if (callBetEarlyLink) {
-                callBetEarlyLink.addEventListener("click", () => {
-                    trackBetsieEvent("betsie_vote", { choice: "call_early_prompt", phase: "countdown" });
-                    openEarlyEndModal();
                 });
             }
             if (isCreatorView) {
@@ -2127,7 +2186,7 @@
                 document.getElementById("challenger-won").classList.toggle("is-hidden", !isVotingPeriod);
                 document.getElementById("share-link").classList.toggle("is-hidden", isVotingPeriod);
                 if (hasChallengerAccepted) {
-                    document.getElementById("add-calendar").classList.toggle("is-hidden", isVotingPeriod);
+                    document.getElementById("call-bet-early-cta").classList.toggle("is-hidden", isVotingPeriod);
                 }
             }
 
