@@ -1259,14 +1259,14 @@
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapedTitle}</div>
-                        ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
+                        <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
                         <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${creatorVoteLabel}</button>
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
-                        ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
+                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
                         <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${challengerVoteLabel}</button>
                     </article>
                 </section>
@@ -1529,13 +1529,13 @@
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapeHtml(title || "-")}</div>
-                        ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
+                        <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
-                        ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
+                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
                 </section>
                 ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
