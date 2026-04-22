@@ -1,4 +1,4 @@
-const CACHE_NAME = "betsie-lite-v1";
+const CACHE_NAME = "betsie-lite-v2";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
@@ -35,6 +35,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isNavigationRequest = event.request.mode === "navigate";
+
+  if (isNavigationRequest) {
+    // Always prefer fresh HTML so users see latest deployed code.
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && isSameOrigin) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", responseClone));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cachedIndex = await caches.match("/index.html");
+          return cachedIndex || caches.match("/");
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {
@@ -46,7 +69,7 @@ self.addEventListener("fetch", (event) => {
           if (
             response &&
             response.status === 200 &&
-            event.request.url.startsWith(self.location.origin)
+            isSameOrigin
           ) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));

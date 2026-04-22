@@ -51,10 +51,24 @@
     </script>
     <script>
         if ("serviceWorker" in navigator) {
+            const SW_VERSION = "2026-04-22";
             window.addEventListener("load", () => {
-                navigator.serviceWorker.register("/sw.js").catch(() => {
-                    // Ignore registration errors to avoid disrupting page usage.
-                });
+                navigator.serviceWorker.register(`/sw.js?v=${SW_VERSION}`, { updateViaCache: "none" })
+                    .then((registration) => {
+                        registration.update();
+                    })
+                    .catch(() => {
+                        // Ignore registration errors to avoid disrupting page usage.
+                    });
+            });
+
+            let isReloadingForServiceWorker = false;
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+                if (isReloadingForServiceWorker) {
+                    return;
+                }
+                isReloadingForServiceWorker = true;
+                window.location.reload();
             });
         }
     </script>
@@ -819,6 +833,16 @@
             </div>
         </div>
     </div>
+    <div id="early-end-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="early-end-modal-title">
+        <div class="modal-card">
+            <h2 id="early-end-modal-title" class="modal-title">Calling the bet early?</h2>
+            <p class="modal-text">Ending the bet early will stop the countdown and move this bet straight into outcome voting.</p>
+            <div class="modal-actions">
+                <button id="early-end-confirm" class="cta" type="button">End bet and vote</button>
+                <button id="early-end-cancel" class="ghost" type="button">Keep countdown running</button>
+            </div>
+        </div>
+    </div>
     <div id="celebration-modal" class="celebration-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
         <div class="celebration-card">
             <img
@@ -839,12 +863,14 @@
         const calendarModal = document.getElementById("calendar-modal");
         const freshModal = document.getElementById("fresh-modal");
         const shareHandoffModal = document.getElementById("share-handoff-modal");
+        const earlyEndModal = document.getElementById("early-end-modal");
         const celebrationModal = document.getElementById("celebration-modal");
         let celebrationTimer = null;
         const shareHandoffState = { role: null, url: "" };
         const url = new URL(window.location.href);
         const HASH_STATE_VERSION = 1;
-        const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf"];
+        const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf", "ev", "ee"];
+        const SEARCH_FALLBACK_KEYS = ["mode", "t", "d", "cn", "chn", "p1", "p2", "tt", "ct", "src", "cr", "ev", "ee"];
 
         function readStateFromSearchParams(searchParams) {
             const state = {};
@@ -891,7 +917,12 @@
             if (!compressed) {
                 return shareUrl.toString();
             }
-            shareUrl.search = "";
+            SHAREABLE_STATE_KEYS.forEach((key) => shareUrl.searchParams.delete(key));
+            SEARCH_FALLBACK_KEYS.forEach((key) => {
+                if (state[key]) {
+                    shareUrl.searchParams.set(key, state[key]);
+                }
+            });
             shareUrl.hash = compressed;
             return shareUrl.toString();
         }
@@ -938,6 +969,8 @@
         const invited = params.get("inv") || "";
         const challengerResponded = params.get("cr") || "";
         const handoffFlash = params.get("hf") || "";
+        const earlyVote = params.get("ev") || "";
+        const earlyEndedAt = params.get("ee") || "";
 
         function trackBetsieEvent(name, params) {
             if (typeof gtag === "function") {
@@ -1077,6 +1110,14 @@
 
         function closeFreshModal() {
             freshModal.classList.add("is-hidden");
+        }
+
+        function openEarlyEndModal() {
+            earlyEndModal.classList.remove("is-hidden");
+        }
+
+        function closeEarlyEndModal() {
+            earlyEndModal.classList.add("is-hidden");
         }
 
         function closeCelebrationModal() {
@@ -1367,6 +1408,20 @@
                 closeShareHandoffModal();
             }
         });
+        document.getElementById("early-end-confirm").addEventListener("click", () => {
+            trackBetsieEvent("betsie_vote", { choice: "call_early_confirm", phase: "countdown" });
+            closeEarlyEndModal();
+            updateUrl("active", { ev: "1", ee: new Date().toISOString() });
+        });
+        document.getElementById("early-end-cancel").addEventListener("click", () => {
+            trackBetsieEvent("betsie_vote", { choice: "call_early_cancel", phase: "countdown" });
+            closeEarlyEndModal();
+        });
+        earlyEndModal.addEventListener("click", (event) => {
+            if (event.target === earlyEndModal) {
+                closeEarlyEndModal();
+            }
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !calendarModal.classList.contains("is-hidden")) {
                 closeCalendarModal();
@@ -1376,6 +1431,9 @@
             }
             if (event.key === "Escape" && !shareHandoffModal.classList.contains("is-hidden")) {
                 closeShareHandoffModal();
+            }
+            if (event.key === "Escape" && !earlyEndModal.classList.contains("is-hidden")) {
+                closeEarlyEndModal();
             }
             if (event.key === "Escape" && !celebrationModal.classList.contains("is-hidden")) {
                 closeCelebrationModal();
@@ -1553,7 +1611,13 @@
                 shareUrl.searchParams.delete("hf");
                 return toCompressedHashUrl(shareUrl.toString());
             })();
-            const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
+            const forceVotingPeriod = earlyVote === "1";
+            const votingPeriod = forceVotingPeriod || (deadline && (new Date(deadline).getTime() <= Date.now()));
+            const parsedEarlyEndedAt = earlyEndedAt ? new Date(earlyEndedAt) : null;
+            const hasEarlyEndedTimestamp = Boolean(parsedEarlyEndedAt && !Number.isNaN(parsedEarlyEndedAt.getTime()));
+            const betTimingLabel = forceVotingPeriod && hasEarlyEndedTimestamp
+                ? `Bet ended: ${parsedEarlyEndedAt.toLocaleString()}`
+                : `Bet ends: ${new Date(deadline).toLocaleString()}`;
             const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const creatorVoteLabel = samePosition ? "Both Right!" : "Creator Won!";
             const challengerVoteLabel = samePosition ? "Both Wrong!" : "Challenger Won!";
@@ -1563,7 +1627,8 @@
                 ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
-                <p class="subtitle" style="text-align: center; margin-top: 0;">Bet ends: ${new Date(deadline).toLocaleString()}</p>
+                <p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
+                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: -2px; margin-bottom: 10px; line-height: 1;"><button id="call-bet-early-link" type="button" style="border: 0; background: transparent; color: #dc2626; text-decoration: none; padding: 0; font: inherit; cursor: pointer;">Call the bet early.</button></p>' : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
@@ -1660,6 +1725,13 @@
                     updateUrl("settle", { w: "0" });
                 });
             }
+            const callBetEarlyLink = document.getElementById("call-bet-early-link");
+            if (callBetEarlyLink) {
+                callBetEarlyLink.addEventListener("click", () => {
+                    trackBetsieEvent("betsie_vote", { choice: "call_early_prompt", phase: "countdown" });
+                    openEarlyEndModal();
+                });
+            }
             if (isCreatorView) {
                 bindCreatorBreadcrumb();
             } else {
@@ -1698,13 +1770,13 @@
 
             const el = document.getElementById("countdown");
             const timer = setInterval(() => {
-                el.textContent = formatCountdown(deadline);
+                el.textContent = forceVotingPeriod ? "Pick Your Winner" : formatCountdown(deadline);
                 if (el.textContent === "Pick Your Winner") {
                     setVotingPeriod(true);
                     clearInterval(timer);
                 }
             }, 1000);
-            el.textContent = formatCountdown(deadline);
+            el.textContent = forceVotingPeriod ? "Pick Your Winner" : formatCountdown(deadline);
             setVotingPeriod(el.textContent === "Pick Your Winner");
         }
 
