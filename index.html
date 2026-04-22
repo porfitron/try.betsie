@@ -13,6 +13,16 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3X6CJW5LPY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+        gtag("config", "G-3X6CJW5LPY");
+    </script>
     <script>
         if (window.location.protocol === "http:" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
             window.location.replace(`https://${window.location.host}${window.location.pathname}${window.location.search}${window.location.hash}`);
@@ -687,6 +697,12 @@
         const challengerResponded = params.get("cr") || "";
         const handoffFlash = params.get("hf") || "";
 
+        function trackBetsieEvent(name, params) {
+            if (typeof gtag === "function") {
+                gtag("event", name, params || {});
+            }
+        }
+
         function updateUrl(nextMode, data = {}) {
             const next = new URL(window.location.href);
             const nextParams = next.searchParams;
@@ -947,7 +963,7 @@
             }
         }
 
-        async function shareCurrentLink(shareUrl = window.location.href) {
+        async function shareCurrentLink(shareUrl = window.location.href, analytics = {}) {
             const shareData = {
                 title: "Betsie challenge",
                 text: "Take this bet with me on Betsie Lite.",
@@ -956,6 +972,7 @@
             try {
                 if (navigator.share) {
                     await navigator.share(shareData);
+                    trackBetsieEvent("betsie_share", { share_method: "native", ...analytics });
                     return;
                 }
             } catch (error) {
@@ -963,31 +980,45 @@
             }
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(shareUrl);
+                trackBetsieEvent("betsie_share", { share_method: "clipboard", ...analytics });
                 alert("Challenge link copied.");
             }
         }
 
         document.getElementById("calendar-google").addEventListener("click", () => {
+            trackBetsieEvent("betsie_calendar_export", { calendar_provider: "google_calendar" });
             openGoogleCalendar();
             closeCalendarModal();
         });
         document.getElementById("calendar-icloud").addEventListener("click", () => {
+            trackBetsieEvent("betsie_calendar_export", { calendar_provider: "icloud_ics" });
             createCalendarFile("betsie-deadline-apple.ics");
             closeCalendarModal();
         });
         document.getElementById("calendar-ics").addEventListener("click", () => {
+            trackBetsieEvent("betsie_calendar_export", { calendar_provider: "ics_download" });
             createCalendarFile();
             closeCalendarModal();
         });
-        document.getElementById("calendar-cancel").addEventListener("click", closeCalendarModal);
+        document.getElementById("calendar-cancel").addEventListener("click", () => {
+            trackBetsieEvent("betsie_calendar_modal", { action: "cancel" });
+            closeCalendarModal();
+        });
         calendarModal.addEventListener("click", (event) => {
             if (event.target === calendarModal) {
                 closeCalendarModal();
             }
         });
-        document.getElementById("logo-button").addEventListener("click", openFreshModal);
-        document.getElementById("fresh-cancel").addEventListener("click", closeFreshModal);
+        document.getElementById("logo-button").addEventListener("click", () => {
+            trackBetsieEvent("betsie_header_logo", { action: "open_start_fresh" });
+            openFreshModal();
+        });
+        document.getElementById("fresh-cancel").addEventListener("click", () => {
+            trackBetsieEvent("betsie_start_fresh", { action: "cancel" });
+            closeFreshModal();
+        });
         document.getElementById("fresh-confirm").addEventListener("click", () => {
+            trackBetsieEvent("betsie_start_fresh", { action: "confirm" });
             window.location.href = window.location.pathname;
         });
         freshModal.addEventListener("click", (event) => {
@@ -1001,7 +1032,8 @@
             }
             const role = shareHandoffState.role;
             const handoffUrl = shareHandoffState.url;
-            await shareCurrentLink(handoffUrl);
+            trackBetsieEvent("betsie_share_handoff", { action: "primary_share", role });
+            await shareCurrentLink(handoffUrl, { share_context: role === "creator" ? "creator_handoff" : "challenger_handoff" });
             closeShareHandoffModal();
             if (role === "creator") {
                 updateUrl("active", { inv: "1", cs: "invite" });
@@ -1015,8 +1047,13 @@
             }
             const role = shareHandoffState.role;
             const handoffUrl = shareHandoffState.url;
+            trackBetsieEvent("betsie_share_handoff", { action: "copy_link", role });
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(handoffUrl);
+                trackBetsieEvent("betsie_share", {
+                    share_method: "clipboard",
+                    share_context: role === "creator" ? "creator_handoff_copy" : "challenger_handoff_copy"
+                });
                 alert(
                     role === "creator"
                         ? "Challenge link copied — paste it into your chat with your friend."
@@ -1030,7 +1067,10 @@
                 updateUrl("active", { src: "accept", cr: "1" });
             }
         });
-        document.getElementById("share-handoff-edit").addEventListener("click", navigateFromHandoffEdit);
+        document.getElementById("share-handoff-edit").addEventListener("click", () => {
+            trackBetsieEvent("betsie_share_handoff", { action: "edit_bet", role: shareHandoffState.role });
+            navigateFromHandoffEdit();
+        });
         shareHandoffModal.addEventListener("click", (event) => {
             if (event.target === shareHandoffModal) {
                 closeShareHandoffModal();
@@ -1060,7 +1100,10 @@
                 <button id="start-bet" class="cta" type="button">Start your first bet</button>
                 <p class="meta">Fast setup<span class="dot">•</span>Mobile first<span class="dot">•</span><strong>Share-ready</strong></p>
             `;
-            document.getElementById("start-bet").addEventListener("click", () => updateUrl("create"));
+            document.getElementById("start-bet").addEventListener("click", () => {
+                trackBetsieEvent("betsie_cta", { cta_id: "start_first_bet", location: "landing" });
+                updateUrl("create");
+            });
         }
 
         function renderCreatorBreadcrumb(step, allowForwardNav = false) {
@@ -1086,12 +1129,14 @@
                 node.addEventListener("click", (event) => {
                     const nextStep = event.currentTarget.getAttribute("data-creator-step");
                     if (nextStep === "create") {
+                        trackBetsieEvent("betsie_creator_step", { step: "create", source: "breadcrumb" });
                         updateUrl("create");
                         return;
                     }
                     if (nextStep === "invite" && invited !== "1") {
                         return;
                     }
+                    trackBetsieEvent("betsie_creator_step", { step: nextStep, source: "breadcrumb" });
                     updateUrl("active", { cs: nextStep, inv: invited });
                 });
             });
@@ -1114,6 +1159,7 @@
                 node.addEventListener("click", (event) => {
                     const nextStep = event.currentTarget.getAttribute("data-challenger-step");
                     if (nextStep === "confirm") {
+                        trackBetsieEvent("betsie_challenger_step", { step: "confirm", source: "breadcrumb" });
                         updateUrl("active", { src: "accept", cr: challengerResponded });
                     }
                 });
@@ -1150,6 +1196,7 @@
             document.getElementById("create-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
+                trackBetsieEvent("betsie_form_submit", { form_id: "create_bet", has_trash_talk: form.get("trashTalk") ? "yes" : "no" });
                 updateUrl("active", {
                     cn: form.get("creatorName"),
                     t: form.get("title"),
@@ -1228,22 +1275,40 @@
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
-                <div class="banner"><a href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
+                <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
+            const promoLink = document.getElementById("betsie-app-promo");
+            if (promoLink) {
+                promoLink.addEventListener("click", () => {
+                    trackBetsieEvent("betsie_outbound_click", { link_id: "app_download_promo", destination: "betsie_app_download" });
+                });
+            }
             if (document.getElementById("share-link")) {
                 document.getElementById("share-link").addEventListener("click", async () => {
                     const shareUrl = hasChallengerAccepted ? window.location.href : challengeShareUrl;
                     const showCreatorHandoff = isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger;
                     const showChallengerHandoff = acceptedFromChallenger && !hasChallengerSentConfirmation;
                     if (showCreatorHandoff) {
+                        trackBetsieEvent("betsie_share_flow", { flow: "creator_handoff_modal" });
                         openShareHandoffModal("creator", shareUrl, creatorName, challengerName);
                         return;
                     }
                     if (showChallengerHandoff) {
+                        trackBetsieEvent("betsie_share_flow", { flow: "challenger_handoff_modal" });
                         openShareHandoffModal("challenger", shareUrl, creatorName, challengerName);
                         return;
                     }
-                    await shareCurrentLink(shareUrl);
+                    const shareContext = (() => {
+                        if (!isCreatorView) {
+                            return hasChallengerSentConfirmation ? "challenger_resend_confirm" : "challenger_send_confirm";
+                        }
+                        if (hasChallengerAccepted) {
+                            return hasInvitedChallenger ? "creator_reminder" : "creator_post_accept";
+                        }
+                        return "creator_invite_direct";
+                    })();
+                    trackBetsieEvent("betsie_share_intent", { share_context: shareContext });
+                    await shareCurrentLink(shareUrl, { share_context: shareContext });
                     if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
                         updateUrl("active", { inv: "1", cs: "invite" });
                         return;
@@ -1254,13 +1319,25 @@
                 });
             }
             if (!p2 && !votingPeriod && document.getElementById("accept-preview")) {
-                document.getElementById("accept-preview").addEventListener("click", () => updateUrl("accept"));
+                document.getElementById("accept-preview").addEventListener("click", () => {
+                    trackBetsieEvent("betsie_preview", { target: "challenger_accept_link" });
+                    updateUrl("accept");
+                });
             }
             if (hasChallengerAccepted) {
-                document.getElementById("add-calendar").addEventListener("click", openCalendarModal);
+                document.getElementById("add-calendar").addEventListener("click", () => {
+                    trackBetsieEvent("betsie_calendar_modal", { action: "open" });
+                    openCalendarModal();
+                });
             }
-            document.getElementById("creator-won").addEventListener("click", () => updateUrl("settle", { w: "1" }));
-            document.getElementById("challenger-won").addEventListener("click", () => updateUrl("settle", { w: "2" }));
+            document.getElementById("creator-won").addEventListener("click", () => {
+                trackBetsieEvent("betsie_vote", { choice: "creator", phase: "after_deadline" });
+                updateUrl("settle", { w: "1" });
+            });
+            document.getElementById("challenger-won").addEventListener("click", () => {
+                trackBetsieEvent("betsie_vote", { choice: "challenger", phase: "after_deadline" });
+                updateUrl("settle", { w: "2" });
+            });
             if (isCreatorView) {
                 bindCreatorBreadcrumb();
             } else {
@@ -1276,8 +1353,10 @@
                     removeHandoffFlashFromAddressBar();
                     requestAnimationFrame(() => {
                         if (shouldAutoCreatorHandoff) {
+                            trackBetsieEvent("betsie_share_handoff", { action: "auto_open", role: "creator" });
                             openShareHandoffModal("creator", challengeShareUrl, creatorName, challengerName);
                         } else if (shouldAutoChallengerHandoff) {
+                            trackBetsieEvent("betsie_share_handoff", { action: "auto_open", role: "challenger" });
                             openShareHandoffModal("challenger", window.location.href, creatorName, challengerName);
                         }
                     });
@@ -1385,11 +1464,24 @@
                 }
             }
 
-            agreeOption.addEventListener("click", () => setMode(true));
-            customOption.addEventListener("click", () => setMode(false));
+            agreeOption.addEventListener("click", () => {
+                trackBetsieEvent("betsie_accept_position", { mode: "agree" });
+                setMode(true);
+            });
+            customOption.addEventListener("click", () => {
+                trackBetsieEvent("betsie_accept_position", { mode: "custom" });
+                setMode(false);
+            });
             document.getElementById("accept-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
+                const position = String(form.get("position") || "").trim();
+                const agreeWithCreator = position === String(title).trim();
+                trackBetsieEvent("betsie_form_submit", {
+                    form_id: "accept_bet",
+                    position_mode: agreeWithCreator ? "agree" : "custom",
+                    has_trash_talk: form.get("challengerTrashTalk") ? "yes" : "no"
+                });
                 updateUrl("active", {
                     chn: form.get("challengerName"),
                     p2: form.get("position") || title,
@@ -1431,18 +1523,51 @@
                 <div class="banner">Confetti coming in Phase 3. For now, claim your bragging rights.</div>
             `;
             if (!winner) {
-                document.getElementById("creator-wins").addEventListener("click", () => updateUrl("settle", { w: "1" }));
-                document.getElementById("challenger-wins").addEventListener("click", () => updateUrl("settle", { w: "2" }));
+                document.getElementById("creator-wins").addEventListener("click", () => {
+                    trackBetsieEvent("betsie_settle_pick", { choice: "creator", phase: "settle_screen" });
+                    updateUrl("settle", { w: "1" });
+                });
+                document.getElementById("challenger-wins").addEventListener("click", () => {
+                    trackBetsieEvent("betsie_settle_pick", { choice: "challenger", phase: "settle_screen" });
+                    updateUrl("settle", { w: "2" });
+                });
             }
             document.getElementById("share-result").addEventListener("click", () => {
-                void shareCurrentLink();
+                trackBetsieEvent("betsie_share_intent", { share_context: "settle_result" });
+                void shareCurrentLink(window.location.href, { share_context: "settle_result" });
             });
             document.getElementById("new-bet").addEventListener("click", () => {
+                trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
                 window.location.href = window.location.pathname;
             });
         }
 
         const hasBetData = Boolean(title && deadline);
+        const surface = (() => {
+            if (!mode && !hasBetData) {
+                return "landing";
+            }
+            if (mode === "create") {
+                return "create";
+            }
+            if (mode === "accept" && hasBetData) {
+                return "accept";
+            }
+            if (mode === "settle" && hasBetData) {
+                return "settle";
+            }
+            if (hasBetData) {
+                return "active";
+            }
+            return "landing";
+        })();
+        trackBetsieEvent("betsie_surface_view", {
+            surface,
+            url_mode: mode || "",
+            invited_flag: invited || "",
+            challenger_responded: challengerResponded || "",
+            has_winner: winner ? "yes" : "no"
+        });
         if (!mode && !hasBetData) {
             renderLanding();
         } else if (mode === "create") {
