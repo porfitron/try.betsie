@@ -540,6 +540,63 @@
             gap: 8px;
         }
 
+        .modal-hint {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            background: var(--surface);
+            border-radius: 12px;
+            font-size: 0.84rem;
+            line-height: 1.45;
+            color: #31353f;
+        }
+
+        .modal-hint strong {
+            color: var(--text-primary);
+        }
+
+        .modal-summary {
+            margin: 0 0 12px;
+            padding: 12px 12px 10px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            background: #FFF;
+            font-size: 0.86rem;
+            line-height: 1.4;
+        }
+
+        .modal-summary-caption {
+            margin: 0 0 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .modal-summary-row {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 8px 10px;
+            padding: 5px 0;
+            border-top: 1px solid #F3F4F6;
+        }
+
+        .modal-summary-row:first-of-type {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .modal-summary-k {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .modal-summary-v {
+            color: var(--text-primary);
+            font-weight: 600;
+            word-break: break-word;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -592,11 +649,26 @@
             </div>
         </div>
     </div>
+    <div id="share-handoff-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="share-handoff-title">
+        <div class="modal-card">
+            <h2 id="share-handoff-title" class="modal-title"></h2>
+            <p id="share-handoff-body" class="modal-text"></p>
+            <div id="share-handoff-summary" class="modal-summary" hidden></div>
+            <p id="share-handoff-hint" class="modal-hint" aria-live="polite"></p>
+            <div class="modal-actions">
+                <button id="share-handoff-primary" class="cta" type="button"></button>
+                <button id="share-handoff-copy" class="ghost" type="button">Copy link</button>
+                <button id="share-handoff-edit" class="ghost" type="button">Edit my bet</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const app = document.getElementById("app");
         const calendarModal = document.getElementById("calendar-modal");
         const freshModal = document.getElementById("fresh-modal");
+        const shareHandoffModal = document.getElementById("share-handoff-modal");
+        const shareHandoffState = { role: null, url: "" };
         const url = new URL(window.location.href);
         const params = url.searchParams;
         const mode = params.get("mode");
@@ -613,6 +685,7 @@
         const creatorStep = params.get("cs") || "";
         const invited = params.get("inv") || "";
         const challengerResponded = params.get("cr") || "";
+        const handoffFlash = params.get("hf") || "";
 
         function updateUrl(nextMode, data = {}) {
             const next = new URL(window.location.href);
@@ -644,6 +717,18 @@
                 return fallback.slice(0, 2).toUpperCase();
             }
             return compact.slice(0, 2).toUpperCase();
+        }
+
+        function toDatetimeLocalInputValue(raw) {
+            if (!raw) {
+                return new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
+            }
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) {
+                return new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
+            }
+            const pad = (n) => String(n).padStart(2, "0");
+            return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
         }
 
         function formatCountdown(target) {
@@ -727,6 +812,141 @@
             freshModal.classList.add("is-hidden");
         }
 
+        function urlWithoutHandoffFlash(urlString) {
+            const next = new URL(urlString);
+            next.searchParams.delete("hf");
+            return next.toString();
+        }
+
+        function removeHandoffFlashFromAddressBar() {
+            const next = new URL(window.location.href);
+            if (!next.searchParams.has("hf")) {
+                return;
+            }
+            next.searchParams.delete("hf");
+            history.replaceState({}, "", next.toString());
+        }
+
+        function buildShareHandoffSummaryRows(role) {
+            const rows = [];
+            if (role === "creator") {
+                rows.push(["You", creatorName || "—"]);
+                rows.push(["Prediction", title || "—"]);
+                rows.push(["Deadline", deadline ? new Date(deadline).toLocaleString() : "—"]);
+                if (trashTalk) {
+                    rows.push(["Trash talk", trashTalk]);
+                }
+            } else {
+                rows.push(["You", challengerName || "—"]);
+                rows.push(["Your position", p2 || "—"]);
+                rows.push(["Creator bet", title || "—"]);
+                if (challengerTrashTalk) {
+                    rows.push(["Trash talk", challengerTrashTalk]);
+                }
+            }
+            return rows
+                .map(
+                    ([k, v]) =>
+                        `<div class="modal-summary-row"><span class="modal-summary-k">${escapeHtml(k)}</span><span class="modal-summary-v">${escapeHtml(v)}</span></div>`
+                )
+                .join("");
+        }
+
+        function openShareHandoffModal(role, handoffUrl, creatorLabel, challengerLabel) {
+            shareHandoffState.role = role;
+            shareHandoffState.url = urlWithoutHandoffFlash(handoffUrl);
+            const titleEl = document.getElementById("share-handoff-title");
+            const bodyEl = document.getElementById("share-handoff-body");
+            const summaryEl = document.getElementById("share-handoff-summary");
+            const hintEl = document.getElementById("share-handoff-hint");
+            const primaryEl = document.getElementById("share-handoff-primary");
+            summaryEl.removeAttribute("hidden");
+            summaryEl.innerHTML = `<p class="modal-summary-caption">Your details</p>${buildShareHandoffSummaryRows(role)}`;
+            if (role === "creator") {
+                const who = (challengerLabel || "").trim() || "your friend";
+                titleEl.textContent = `Send this link to ${who}`;
+                bodyEl.textContent =
+                    "Betsie Lite has no login, so your friend needs you to send the challenge link below.";
+                hintEl.textContent =
+                    "Next: your device opens a share sheet or picker. Choose Messages, WhatsApp, or another chat where you already talk, then send the link.";
+                primaryEl.textContent = "Share challenge link";
+            } else {
+                const who = (creatorLabel || "").trim() || "the creator";
+                titleEl.textContent = `Send the updated link back to ${who}`;
+                bodyEl.textContent =
+                    "Betsie Lite has no login, so the creator needs you to send the confirmation link below.";
+                hintEl.textContent =
+                    "Next: sharing packages the link for iMessage, WhatsApp, or you can copy it — they need this version, not an older message.";
+                primaryEl.textContent = "Share confirmation link";
+            }
+            shareHandoffModal.classList.remove("is-hidden");
+            primaryEl.focus();
+        }
+
+        function closeShareHandoffModal() {
+            shareHandoffModal.classList.add("is-hidden");
+            shareHandoffState.role = null;
+            shareHandoffState.url = "";
+            const summaryEl = document.getElementById("share-handoff-summary");
+            summaryEl.setAttribute("hidden", "");
+            summaryEl.innerHTML = "";
+        }
+
+        function navigateFromHandoffEdit() {
+            const role = shareHandoffState.role;
+            closeShareHandoffModal();
+            if (role === "creator") {
+                const q = new URLSearchParams();
+                q.set("mode", "create");
+                if (creatorName) {
+                    q.set("cn", creatorName);
+                }
+                if (title) {
+                    q.set("t", title);
+                }
+                if (deadline) {
+                    q.set("d", deadline);
+                }
+                if (trashTalk) {
+                    q.set("tt", trashTalk);
+                }
+                q.set("p1", p1 || "For");
+                window.location.href = `${window.location.pathname}?${q.toString()}`;
+                return;
+            }
+            if (role === "challenger") {
+                try {
+                    sessionStorage.setItem(
+                        "betsieAcceptDraft",
+                        JSON.stringify({
+                            chn: challengerName,
+                            position: p2,
+                            ct: challengerTrashTalk,
+                            agreeWithCreator: String(p2).trim() === String(title).trim()
+                        })
+                    );
+                } catch (_) {
+                    // Ignore storage failures (private mode, quota).
+                }
+                const q = new URLSearchParams();
+                q.set("mode", "accept");
+                if (creatorName) {
+                    q.set("cn", creatorName);
+                }
+                if (title) {
+                    q.set("t", title);
+                }
+                if (deadline) {
+                    q.set("d", deadline);
+                }
+                if (trashTalk) {
+                    q.set("tt", trashTalk);
+                }
+                q.set("p1", p1 || "For");
+                window.location.href = `${window.location.pathname}?${q.toString()}`;
+            }
+        }
+
         async function shareCurrentLink(shareUrl = window.location.href) {
             const shareData = {
                 title: "Betsie challenge",
@@ -775,12 +995,56 @@
                 closeFreshModal();
             }
         });
+        document.getElementById("share-handoff-primary").addEventListener("click", async () => {
+            if (!shareHandoffState.url) {
+                return;
+            }
+            const role = shareHandoffState.role;
+            const handoffUrl = shareHandoffState.url;
+            await shareCurrentLink(handoffUrl);
+            closeShareHandoffModal();
+            if (role === "creator") {
+                updateUrl("active", { inv: "1", cs: "invite" });
+            } else if (role === "challenger") {
+                updateUrl("active", { src: "accept", cr: "1" });
+            }
+        });
+        document.getElementById("share-handoff-copy").addEventListener("click", async () => {
+            if (!shareHandoffState.url) {
+                return;
+            }
+            const role = shareHandoffState.role;
+            const handoffUrl = shareHandoffState.url;
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(handoffUrl);
+                alert(
+                    role === "creator"
+                        ? "Challenge link copied — paste it into your chat with your friend."
+                        : "Confirmation link copied — paste it into your chat with the creator."
+                );
+            }
+            closeShareHandoffModal();
+            if (role === "creator") {
+                updateUrl("active", { inv: "1", cs: "invite" });
+            } else if (role === "challenger") {
+                updateUrl("active", { src: "accept", cr: "1" });
+            }
+        });
+        document.getElementById("share-handoff-edit").addEventListener("click", navigateFromHandoffEdit);
+        shareHandoffModal.addEventListener("click", (event) => {
+            if (event.target === shareHandoffModal) {
+                closeShareHandoffModal();
+            }
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !calendarModal.classList.contains("is-hidden")) {
                 closeCalendarModal();
             }
             if (event.key === "Escape" && !freshModal.classList.contains("is-hidden")) {
                 closeFreshModal();
+            }
+            if (event.key === "Escape" && !shareHandoffModal.classList.contains("is-hidden")) {
+                closeShareHandoffModal();
             }
         });
 
@@ -858,6 +1122,7 @@
 
         function renderCreate() {
             const defaultDate = new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
+            const deadlineFieldValue = deadline ? toDatetimeLocalInputValue(deadline) : defaultDate;
             app.innerHTML = `
                 ${renderCreatorBreadcrumb("create")}
                 <h1>Create your challenge</h1>
@@ -865,19 +1130,19 @@
                 <form id="create-form">
                     <div>
                         <label for="creator-name">Your name</label>
-                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="Taylor">
+                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="Taylor" value="${escapeHtml(creatorName)}">
                     </div>
                     <div>
                         <label for="bet-title">I bet that...</label>
-                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="the Knicks make the playoffs this season">
+                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="the Knicks make the playoffs this season" value="${escapeHtml(title)}">
                     </div>
                     <div>
                         <label for="bet-deadline">Deadline</label>
-                        <input id="bet-deadline" name="deadline" type="datetime-local" required value="${defaultDate}">
+                        <input id="bet-deadline" name="deadline" type="datetime-local" required value="${deadlineFieldValue}">
                     </div>
                     <div>
                         <label for="bet-trash-talk">Optional trash talk</label>
-                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one.">
+                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one." value="${escapeHtml(trashTalk)}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
@@ -893,7 +1158,8 @@
                     tt: form.get("trashTalk"),
                     p2: "",
                     cs: "confirm",
-                    inv: ""
+                    inv: "",
+                    hf: "c"
                 });
             });
             bindCreatorBreadcrumb();
@@ -914,11 +1180,11 @@
             const isCreatorView = !acceptedFromChallenger;
             const hasInvitedChallenger = invited === "1";
             const flowStep = hasChallengerAccepted || hasInvitedChallenger ? "invite" : "confirm";
-            const inviteButtonText = hasInvitedChallenger ? "Remind challenger" : "Invite challenger";
+            const inviteButtonText = hasInvitedChallenger ? "Send a reminder" : "Invite challenger";
             const inviteButtonClass = hasInvitedChallenger ? "ghost" : "cta";
             const hasChallengerSentConfirmation = challengerResponded === "1";
             const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
-            const challengerButtonText = hasChallengerSentConfirmation ? "Active bet link" : "Send confirmation link";
+            const challengerButtonText = hasChallengerSentConfirmation ? "Re-share confirmation link" : "Send confirmation link";
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -928,9 +1194,12 @@
                 shareUrl.searchParams.delete("w");
                 shareUrl.searchParams.delete("cs");
                 shareUrl.searchParams.delete("inv");
+                shareUrl.searchParams.delete("hf");
                 return shareUrl.toString();
             })();
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
+            const showCreatorWaitingForConfirmation =
+                isCreatorView && flowStep === "invite" && !hasChallengerSentConfirmation;
             app.innerHTML = `
                 ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
@@ -951,22 +1220,32 @@
                         <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Challenger Won!</button>
                     </article>
                 </section>
-                ${acceptedFromChallenger ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
-                ${isCreatorView ? '<p class="subtitle"><strong>Confirm:</strong> Review your bet details, then invite your challenger.</p>' : ""}
                 <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
+                ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
+                ${acceptedFromChallenger && hasChallengerSentConfirmation ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
-                ${acceptedFromChallenger ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
-                ${acceptedFromChallenger ? "" : '<p class="subtitle">After sending the invitation to your friend, wait for them to send you their confirmation link.</p>'}
+                ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
-                ${hasChallengerAccepted ? `<button id="add-calendar" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
+                ${hasChallengerAccepted ? `<button id="add-calendar" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
                 <div class="banner"><a href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
             if (document.getElementById("share-link")) {
                 document.getElementById("share-link").addEventListener("click", async () => {
-                    await shareCurrentLink(hasChallengerAccepted ? window.location.href : challengeShareUrl);
+                    const shareUrl = hasChallengerAccepted ? window.location.href : challengeShareUrl;
+                    const showCreatorHandoff = isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger;
+                    const showChallengerHandoff = acceptedFromChallenger && !hasChallengerSentConfirmation;
+                    if (showCreatorHandoff) {
+                        openShareHandoffModal("creator", shareUrl, creatorName, challengerName);
+                        return;
+                    }
+                    if (showChallengerHandoff) {
+                        openShareHandoffModal("challenger", shareUrl, creatorName, challengerName);
+                        return;
+                    }
+                    await shareCurrentLink(shareUrl);
                     if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
-                        updateUrl("active", { inv: "1", cs: "confirm" });
+                        updateUrl("active", { inv: "1", cs: "invite" });
                         return;
                     }
                     if (!isCreatorView && !hasChallengerSentConfirmation) {
@@ -986,6 +1265,25 @@
                 bindCreatorBreadcrumb();
             } else {
                 bindChallengerBreadcrumb();
+            }
+
+            const shouldAutoCreatorHandoff =
+                handoffFlash === "c" && isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger;
+            const shouldAutoChallengerHandoff =
+                handoffFlash === "ch" && acceptedFromChallenger && !hasChallengerSentConfirmation;
+            if (handoffFlash === "c" || handoffFlash === "ch") {
+                if (shouldAutoCreatorHandoff || shouldAutoChallengerHandoff) {
+                    removeHandoffFlashFromAddressBar();
+                    requestAnimationFrame(() => {
+                        if (shouldAutoCreatorHandoff) {
+                            openShareHandoffModal("creator", challengeShareUrl, creatorName, challengerName);
+                        } else if (shouldAutoChallengerHandoff) {
+                            openShareHandoffModal("challenger", window.location.href, creatorName, challengerName);
+                        }
+                    });
+                } else {
+                    removeHandoffFlashFromAddressBar();
+                }
             }
 
             function setVotingPeriod(isVotingPeriod) {
@@ -1014,31 +1312,56 @@
                 updateUrl("active");
                 return;
             }
+            let acceptDraft = null;
+            try {
+                const raw = sessionStorage.getItem("betsieAcceptDraft");
+                if (raw) {
+                    acceptDraft = JSON.parse(raw);
+                    sessionStorage.removeItem("betsieAcceptDraft");
+                }
+            } catch (_) {
+                acceptDraft = null;
+            }
+            const creatorPossessive = creatorName.trim()
+                ? `${escapeHtml(creatorName)}'s`
+                : "the creator's";
+            const agreeWithCreatorLabel = creatorName.trim()
+                ? `Agree with ${escapeHtml(creatorName)}`
+                : "Agree with creator";
+            const creatorSaysPrefix = creatorName.trim()
+                ? `${escapeHtml(creatorName)} says:`
+                : "Creator says:";
+            const startWithAgree = !acceptDraft || acceptDraft.agreeWithCreator;
+            const draftChnValue = acceptDraft && acceptDraft.chn ? escapeHtml(acceptDraft.chn) : "";
+            const draftCtValue = acceptDraft && acceptDraft.ct ? escapeHtml(acceptDraft.ct) : "";
+            const positionFieldValue = startWithAgree
+                ? escapeHtml(title)
+                : escapeHtml((acceptDraft && acceptDraft.position) || "");
             app.innerHTML = `
                 ${renderChallengerBreadcrumb("accept")}
                 <h1>Accept challenge</h1>
-                <p class="subtitle">Write your response to the creator's prediction. You can agree or make an alternate call.</p>
+                <p class="subtitle">Write your response to ${creatorPossessive} prediction. You can agree or make an alternate call.</p>
                 <div class="pill-row">
                     <div class="pill yes">Creator prediction</div>
                 </div>
                 <p class="subtitle">Your friend bet that...<br><strong>${escapeHtml(title)}</strong></p>
                 <form id="accept-form">
-                    ${trashTalk ? `<p class="subtitle">Creator says: "${escapeHtml(trashTalk)}"</p>` : ""}
+                    ${trashTalk ? `<p class="subtitle">${creatorSaysPrefix} "${escapeHtml(trashTalk)}"</p>` : ""}
                     <div>
                         <label for="challenger-name">Your name</label>
-                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="Jordan">
+                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="Jordan" value="${draftChnValue}">
                     </div>
                     <div>
                         <label>Your position</label>
                         <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
-                            <button id="agree-option" class="choice active" type="button" aria-pressed="true">Agree with creator</button>
-                            <button id="custom-option" class="choice" type="button" aria-pressed="false">Use my own prediction</button>
+                            <button id="agree-option" class="choice${startWithAgree ? " active" : ""}" type="button" aria-pressed="${startWithAgree}">${agreeWithCreatorLabel}</button>
+                            <button id="custom-option" class="choice${startWithAgree ? "" : " active"}" type="button" aria-pressed="${!startWithAgree}">Use my own prediction</button>
                         </div>
-                        <input id="challenger-position" name="position" type="text" maxlength="100" required value="${escapeHtml(title)}" placeholder="your response prediction" disabled>
+                        <input id="challenger-position" name="position" type="text" maxlength="100" required value="${positionFieldValue}" placeholder="your response prediction"${startWithAgree ? " disabled" : ""}>
                     </div>
                     <div>
                         <label for="challenger-trash-talk">Trash talk (optional?)</label>
-                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="You are going down.">
+                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="You are going down." value="${draftCtValue}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
@@ -1072,7 +1395,8 @@
                     p2: form.get("position") || title,
                     ct: form.get("challengerTrashTalk"),
                     src: "accept",
-                    cr: ""
+                    cr: "",
+                    hf: "ch"
                 });
             });
             bindChallengerBreadcrumb();
