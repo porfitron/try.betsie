@@ -833,6 +833,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
     <script>
         const app = document.getElementById("app");
         const calendarModal = document.getElementById("calendar-modal");
@@ -842,7 +843,86 @@
         let celebrationTimer = null;
         const shareHandoffState = { role: null, url: "" };
         const url = new URL(window.location.href);
-        const params = url.searchParams;
+        const HASH_STATE_VERSION = 1;
+        const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf"];
+
+        function readStateFromSearchParams(searchParams) {
+            const state = {};
+            SHAREABLE_STATE_KEYS.forEach((key) => {
+                const value = searchParams.get(key);
+                if (value) {
+                    state[key] = value;
+                }
+            });
+            return state;
+        }
+
+        function decodeStateFromHash(hashValue) {
+            if (!hashValue) {
+                return null;
+            }
+            const encoded = hashValue.startsWith("#") ? hashValue.slice(1) : hashValue;
+            if (!encoded || !window.LZString) {
+                return null;
+            }
+            try {
+                const decompressed = window.LZString.decompressFromEncodedURIComponent(encoded);
+                if (!decompressed) {
+                    return null;
+                }
+                const parsed = JSON.parse(decompressed);
+                if (!parsed || parsed.v !== HASH_STATE_VERSION || typeof parsed.state !== "object" || parsed.state === null) {
+                    return null;
+                }
+                return parsed.state;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function toCompressedHashUrl(urlString) {
+            const shareUrl = new URL(urlString);
+            const state = readStateFromSearchParams(shareUrl.searchParams);
+            if (!Object.keys(state).length || !window.LZString) {
+                return shareUrl.toString();
+            }
+            const payload = JSON.stringify({ v: HASH_STATE_VERSION, state });
+            const compressed = window.LZString.compressToEncodedURIComponent(payload);
+            if (!compressed) {
+                return shareUrl.toString();
+            }
+            shareUrl.search = "";
+            shareUrl.hash = compressed;
+            return shareUrl.toString();
+        }
+
+        function stripHandoffFlashFromUrl(urlString) {
+            const next = new URL(urlString);
+            const decodedHashState = decodeStateFromHash(next.hash);
+            if (decodedHashState) {
+                delete decodedHashState.hf;
+                const payload = JSON.stringify({ v: HASH_STATE_VERSION, state: decodedHashState });
+                const compressed = window.LZString ? window.LZString.compressToEncodedURIComponent(payload) : "";
+                next.hash = compressed || "";
+                return next.toString();
+            }
+            next.searchParams.delete("hf");
+            return toCompressedHashUrl(next.toString());
+        }
+
+        const params = (() => {
+            const merged = new URLSearchParams(url.search);
+            const decodedHashState = decodeStateFromHash(url.hash);
+            if (decodedHashState) {
+                SHAREABLE_STATE_KEYS.forEach((key) => merged.delete(key));
+                Object.entries(decodedHashState).forEach(([key, value]) => {
+                    if (value) {
+                        merged.set(key, value);
+                    }
+                });
+            }
+            return merged;
+        })();
         const mode = params.get("mode");
         const title = params.get("t") || "";
         const creatorName = params.get("cn") || "";
@@ -867,7 +947,7 @@
 
         function updateUrl(nextMode, data = {}) {
             const next = new URL(window.location.href);
-            const nextParams = next.searchParams;
+            const nextParams = new URLSearchParams(params.toString());
             if (nextMode) {
                 nextParams.set("mode", nextMode);
             }
@@ -878,6 +958,8 @@
                     nextParams.delete(key);
                 }
             });
+            next.search = nextParams.toString();
+            next.hash = "";
             window.location.href = next.toString();
         }
 
@@ -937,7 +1019,7 @@
             }
             const start = new Date(deadline);
             const end = new Date(start.getTime() + 30 * 60000);
-            const betUrl = window.location.href;
+            const betUrl = toCompressedHashUrl(window.location.href);
             const escapedBetUrl = betUrl
                 .replaceAll("\\", "\\\\")
                 .replaceAll(";", "\\;")
@@ -971,7 +1053,7 @@
             }
             const start = new Date(deadline);
             const end = new Date(start.getTime() + 30 * 60000);
-            const betUrl = window.location.href;
+            const betUrl = toCompressedHashUrl(window.location.href);
             const googleUrl = new URL("https://calendar.google.com/calendar/render");
             googleUrl.searchParams.set("action", "TEMPLATE");
             googleUrl.searchParams.set("text", `Betsie Bet: ${title}`);
@@ -1017,13 +1099,23 @@
         }
 
         function urlWithoutHandoffFlash(urlString) {
-            const next = new URL(urlString);
-            next.searchParams.delete("hf");
-            return next.toString();
+            return stripHandoffFlashFromUrl(urlString);
         }
 
         function removeHandoffFlashFromAddressBar() {
             const next = new URL(window.location.href);
+            const decodedHashState = decodeStateFromHash(next.hash);
+            if (decodedHashState) {
+                if (!decodedHashState.hf) {
+                    return;
+                }
+                delete decodedHashState.hf;
+                const payload = JSON.stringify({ v: HASH_STATE_VERSION, state: decodedHashState });
+                const compressed = window.LZString ? window.LZString.compressToEncodedURIComponent(payload) : "";
+                next.hash = compressed || "";
+                history.replaceState({}, "", next.toString());
+                return;
+            }
             if (!next.searchParams.has("hf")) {
                 return;
             }
@@ -1152,10 +1244,11 @@
         }
 
         async function shareCurrentLink(shareUrl = window.location.href, analytics = {}) {
+            const normalizedShareUrl = toCompressedHashUrl(shareUrl);
             const shareData = {
                 title: "Betsie challenge",
                 text: "It's happening now, on Betsie Lite.",
-                url: shareUrl
+                url: normalizedShareUrl
             };
             try {
                 if (navigator.share) {
@@ -1167,7 +1260,7 @@
                 // Fallback to clipboard when share is cancelled or unavailable.
             }
             if (navigator.clipboard) {
-                await navigator.clipboard.writeText(shareUrl);
+                await navigator.clipboard.writeText(normalizedShareUrl);
                 trackBetsieEvent("betsie_share", { share_method: "clipboard", ...analytics });
                 alert("Challenge link copied.");
             }
@@ -1450,7 +1543,7 @@
                 shareUrl.searchParams.delete("cs");
                 shareUrl.searchParams.delete("inv");
                 shareUrl.searchParams.delete("hf");
-                return shareUrl.toString();
+                return toCompressedHashUrl(shareUrl.toString());
             })();
             const confirmationShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -1458,7 +1551,7 @@
                 shareUrl.searchParams.set("src", "accept");
                 shareUrl.searchParams.set("cr", "1");
                 shareUrl.searchParams.delete("hf");
-                return shareUrl.toString();
+                return toCompressedHashUrl(shareUrl.toString());
             })();
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
             const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
@@ -1586,7 +1679,7 @@
                             openShareHandoffModal("creator", challengeShareUrl, creatorName, challengerName);
                         } else if (shouldAutoChallengerHandoff) {
                             trackBetsieEvent("betsie_share_handoff", { action: "auto_open", role: "challenger" });
-                            openShareHandoffModal("challenger", window.location.href, creatorName, challengerName);
+                            openShareHandoffModal("challenger", toCompressedHashUrl(window.location.href), creatorName, challengerName);
                         }
                     });
                 } else {
