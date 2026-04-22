@@ -377,6 +377,15 @@
             animation: winnerPulse 1.8s ease-in-out infinite;
         }
 
+        .competitor.is-loser {
+            border-color: rgba(239, 68, 68, 0.9);
+            box-shadow:
+                0 0 0 2px rgba(239, 68, 68, 0.34),
+                0 0 18px rgba(239, 68, 68, 0.48),
+                0 10px 24px rgba(239, 68, 68, 0.2);
+            animation: loserPulse 1.8s ease-in-out infinite;
+        }
+
         @keyframes winnerPulse {
             0% {
                 box-shadow:
@@ -397,6 +406,30 @@
                     0 0 0 2px rgba(16, 185, 129, 0.32),
                     0 0 14px rgba(16, 185, 129, 0.38),
                     0 8px 20px rgba(16, 185, 129, 0.16);
+                transform: scale(1);
+            }
+        }
+
+        @keyframes loserPulse {
+            0% {
+                box-shadow:
+                    0 0 0 2px rgba(239, 68, 68, 0.32),
+                    0 0 14px rgba(239, 68, 68, 0.38),
+                    0 8px 20px rgba(239, 68, 68, 0.16);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 4px rgba(239, 68, 68, 0.48),
+                    0 0 28px rgba(239, 68, 68, 0.62),
+                    0 14px 30px rgba(239, 68, 68, 0.28);
+                transform: scale(1.01);
+            }
+            100% {
+                box-shadow:
+                    0 0 0 2px rgba(239, 68, 68, 0.32),
+                    0 0 14px rgba(239, 68, 68, 0.38),
+                    0 8px 20px rgba(239, 68, 68, 0.16);
                 transform: scale(1);
             }
         }
@@ -842,6 +875,13 @@
             return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
         }
 
+        function nowLocalInputValue() {
+            const now = new Date();
+            now.setSeconds(0, 0);
+            const pad = (n) => String(n).padStart(2, "0");
+            return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        }
+
         function formatCountdown(target) {
             const remaining = new Date(target).getTime() - Date.now();
             if (remaining <= 0) {
@@ -1006,7 +1046,7 @@
                 bodyEl.textContent =
                     "Betsie Lite has no login, so the creator needs you to send the confirmation link below.";
                 hintEl.textContent =
-                    "Next: sharing packages the link for iMessage, WhatsApp, or you can copy it — they need this version, not an older message.";
+                    "Next: Click share to send the link in iMessage, WhatsApp, or copy it — they need this version, not an older message.";
                 primaryEl.textContent = "Share confirmation link";
             }
             shareHandoffModal.classList.remove("is-hidden");
@@ -1220,7 +1260,7 @@
                 <h1>How Betsie Lite works</h1>
                 <p class="subtitle">Challenge a friend, pass each other links, and keep the vibes competitive. No account needed.</p>
                 <section class="list" aria-label="Betsie highlights">
-                    <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, side, and deadline.</div>
+                    <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, details, and deadline.</div>
                     <div class="item"><span class="icon" aria-hidden="true">2</span>Exchange updates with links in iMessage or WhatsApp.</div>
                     <div class="item"><span class="icon" aria-hidden="true">3</span>Track countdown and settle with bragging rights.</div>
                 </section>
@@ -1296,6 +1336,7 @@
         function renderCreate() {
             const defaultDate = new Date(Date.now() + 24 * 3600000).toISOString().slice(0, 16);
             const deadlineFieldValue = deadline ? toDatetimeLocalInputValue(deadline) : defaultDate;
+            const minDeadlineValue = nowLocalInputValue();
             app.innerHTML = `
                 ${renderCreatorBreadcrumb("create")}
                 <h1>Create your challenge</h1>
@@ -1303,18 +1344,18 @@
                 <form id="create-form">
                     <div>
                         <label for="creator-name">Your name</label>
-                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="Taylor" value="${escapeHtml(creatorName)}">
+                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="or what people call you" value="${escapeHtml(creatorName)}">
                     </div>
                     <div>
                         <label for="bet-title">I bet that...</label>
-                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="the Knicks make the playoffs this season" value="${escapeHtml(title)}">
+                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="Jules and Robin will hook up" value="${escapeHtml(title)}">
                     </div>
                     <div>
                         <label for="bet-deadline">Deadline</label>
-                        <input id="bet-deadline" name="deadline" type="datetime-local" required value="${deadlineFieldValue}">
+                        <input id="bet-deadline" name="deadline" type="datetime-local" required min="${minDeadlineValue}" value="${deadlineFieldValue}">
                     </div>
                     <div>
-                        <label for="bet-trash-talk">Optional trash talk</label>
+                        <label for="bet-trash-talk">Trash talk (optional?)</label>
                         <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one." value="${escapeHtml(trashTalk)}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
@@ -1323,12 +1364,18 @@
             document.getElementById("create-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
+                const deadlineValue = String(form.get("deadline") || "");
+                const parsedDeadline = new Date(deadlineValue);
+                if (!deadlineValue || Number.isNaN(parsedDeadline.getTime()) || parsedDeadline.getTime() < Date.now()) {
+                    alert("Please choose a deadline that is now or later.");
+                    return;
+                }
                 trackBetsieEvent("betsie_form_submit", { form_id: "create_bet", has_trash_talk: form.get("trashTalk") ? "yes" : "no" });
                 updateUrl("active", {
                     cn: form.get("creatorName"),
                     t: form.get("title"),
                     p1: "For",
-                    d: form.get("deadline"),
+                    d: deadlineValue,
                     tt: form.get("trashTalk"),
                     p2: "",
                     cs: "confirm",
@@ -1537,6 +1584,7 @@
             const agreeWithCreatorLabel = creatorName.trim()
                 ? `Agree with ${escapeHtml(creatorName)}`
                 : "Agree with creator";
+            const creatorDisplayName = creatorName.trim() || "Your friend";
             const creatorSaysPrefix = creatorName.trim()
                 ? `${escapeHtml(creatorName)} says:`
                 : "Creator says:";
@@ -1553,12 +1601,12 @@
                 <div class="pill-row">
                     <div class="pill yes">Creator prediction</div>
                 </div>
-                <p class="subtitle">Your friend bet that...<br><strong>${escapeHtml(title)}</strong></p>
+                <p class="subtitle">${escapeHtml(creatorDisplayName)} bet that...<br><strong>${escapeHtml(title)}</strong></p>
                 <form id="accept-form">
                     ${trashTalk ? `<p class="subtitle">${creatorSaysPrefix} "${escapeHtml(trashTalk)}"</p>` : ""}
                     <div>
                         <label for="challenger-name">Your name</label>
-                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="Jordan" value="${draftChnValue}">
+                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="or what people call you" value="${draftChnValue}">
                     </div>
                     <div>
                         <label>Your position</label>
@@ -1630,10 +1678,16 @@
             const name = winner === "1" ? creatorDisplayName : winner === "2" ? challengerDisplayName : "";
             const samePosition = Boolean(p2) && String(p2).trim() === String(title).trim();
             const betDateLabel = deadline ? new Date(deadline).toLocaleDateString() : "";
-            const creatorIsWinner = winner === "1";
-            const challengerIsWinner = winner === "2";
+            const bothWin = samePosition && winner === "1";
+            const bothLose = samePosition && winner === "2";
+            const creatorIsWinner = bothWin || winner === "1";
+            const challengerIsWinner = bothWin || winner === "2";
+            const creatorIsLoser = bothLose;
+            const challengerIsLoser = bothLose;
             const creatorWinnerClass = creatorIsWinner ? " is-winner" : "";
             const challengerWinnerClass = challengerIsWinner ? " is-winner" : "";
+            const creatorLoserClass = creatorIsLoser ? " is-loser" : "";
+            const challengerLoserClass = challengerIsLoser ? " is-loser" : "";
             const settleHeadline = (() => {
                 if (samePosition && winner === "1") {
                     return "Both win this round";
@@ -1658,13 +1712,13 @@
                 ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
                 <h1>${settleHeadline}</h1>
                 <section class="matchup" aria-label="Final head to head">
-                    <article class="competitor${creatorWinnerClass}">
+                    <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapeHtml(title || "-")}</div>
                         <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
-                    <article class="competitor${challengerWinnerClass}">
+                    <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
