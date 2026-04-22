@@ -34,6 +34,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@700&display=swap" rel="stylesheet">
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-3X6CJW5LPY"></script>
     <script>
@@ -94,9 +97,7 @@
         body {
             margin: 0;
             min-height: 100%;
-            background: radial-gradient(circle at 12% 5%, rgba(243, 109, 111, 0.20), transparent 35%),
-                radial-gradient(circle at 90% 95%, rgba(16, 185, 129, 0.14), transparent 32%),
-                var(--canvas-white);
+            background: #efefef;
             color: var(--text-primary);
             font-family: "Avenir Next", Avenir, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
@@ -130,16 +131,17 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
+            padding: 0 22px;
         }
 
         .panel-logo {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            object-fit: cover;
-            background: #FFE1EC;
-            border: 1px solid rgba(243, 109, 111, 0.2);
-            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.14);
+            width: min(300px, 70vw);
+            height: auto;
+            border-radius: 0;
+            object-fit: contain;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
             z-index: 2;
             cursor: pointer;
         }
@@ -148,14 +150,16 @@
             border: 0;
             padding: 0;
             background: transparent;
-            border-radius: 14px;
+            border-radius: 6px;
             display: inline-flex;
         }
 
         .header-brand {
             display: inline-flex;
             align-items: center;
+            justify-content: flex-start;
             gap: 10px;
+            min-width: 0;
         }
 
         .header-brand-label {
@@ -208,45 +212,91 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            margin: 0 0 16px;
-            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 26px;
+            flex-wrap: nowrap;
         }
 
         .crumb {
-            border: 1px solid #E5E7EB;
-            background: #FFF;
+            border: 0;
+            background: transparent;
             color: var(--text-secondary);
-            border-radius: 999px;
-            min-height: 34px;
-            padding: 0 12px;
-            font-size: 0.78rem;
+            border-radius: 12px;
+            min-height: auto;
+            min-width: 70px;
+            padding: 0;
+            font-size: 0.67rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.07em;
             text-transform: uppercase;
             cursor: pointer;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            line-height: 1;
+            transition: color 140ms ease;
+        }
+
+        .crumb::before {
+            content: attr(data-step-number);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(243, 109, 111, 0.35);
+            color: var(--betsie-coral);
+            background: rgba(243, 109, 111, 0.06);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            text-transform: none;
+            box-shadow: 0 0 0 1.5px rgba(243, 109, 111, 0.12);
+            transition:
+                border-color 140ms ease,
+                color 140ms ease,
+                background-color 140ms ease,
+                box-shadow 140ms ease;
         }
 
         .crumb.is-current {
-            border-color: rgba(243, 109, 111, 0.7);
-            background: rgba(243, 109, 111, 0.1);
-            color: #8C2A2B;
+            color: var(--text-primary);
+        }
+
+        .crumb.is-current::before {
+            border-color: var(--betsie-coral);
+            color: #FFFFFF;
+            background: var(--betsie-coral);
+            box-shadow:
+                0 0 0 2.5px rgba(243, 109, 111, 0.24),
+                0 6px 16px rgba(243, 109, 111, 0.2);
         }
 
         .crumb.is-complete {
             color: var(--text-primary);
-            border-color: #D1D5DB;
+        }
+
+        .crumb.is-complete::before {
+            color: var(--betsie-coral);
+            border-color: rgba(243, 109, 111, 0.55);
+            background: rgba(243, 109, 111, 0.12);
+            box-shadow: 0 0 0 1.5px rgba(243, 109, 111, 0.16);
         }
 
         .crumb:disabled {
-            opacity: 0.5;
+            opacity: 0.66;
             cursor: default;
         }
 
         .crumb-sep {
-            color: #9CA3AF;
-            font-size: 0.78rem;
+            width: clamp(14px, 6.4vw, 46px);
+            height: 1.5px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(243, 109, 111, 0.15), rgba(243, 109, 111, 0.58), rgba(243, 109, 111, 0.15));
             user-select: none;
+            margin-top: -18px;
         }
 
         .brand-dot {
@@ -275,11 +325,16 @@
 
         .value-prop {
             margin: 0;
+            margin-left: auto;
+            font-family: "Funnel Display", "Avenir Next", Avenir, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 700;
             font-size: clamp(0.95rem, 3.7vw, 1.1rem);
             line-height: 1.2;
             letter-spacing: -0.01em;
             text-align: right;
-            max-width: 280px;
+            max-width: none;
+            white-space: nowrap;
+            color: var(--betsie-coral);
         }
 
         .subtitle {
@@ -289,12 +344,16 @@
             line-height: 1.5;
         }
 
+        .subtitle.bet-timing-line {
+            font-size: calc(1rem - 2pt);
+        }
+
         .accept-creator-preview {
             margin: 8px 0 10px;
         }
 
         .accept-creator-preview .competitor-quote {
-            color: #15803d;
+            color: #002cfc;
         }
 
         .accept-creator-preview .competitor-position {
@@ -303,8 +362,14 @@
             font-weight: 700;
         }
 
-        .accept-instruction {
-            margin-bottom: 8px;
+        .accept-form-heading {
+            margin: 6px 0 16px;
+            font-size: clamp(1.08rem, 4.2vw, 1.28rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            text-align: center;
+            color: var(--text-primary);
         }
 
         .list {
@@ -410,6 +475,10 @@
             color: var(--text-primary);
         }
 
+        #bet-deadline {
+            font-size: calc(1rem - 2pt);
+        }
+
         .pill-row {
             display: flex;
             flex-wrap: wrap;
@@ -421,7 +490,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            margin: 6px 0 2px;
+            margin: 6px 0 14px;
         }
 
         .matchup {
@@ -561,10 +630,10 @@
             margin-top: 10px;
             width: 100%;
             min-height: 38px;
-            border: 1px solid rgba(243, 109, 111, 0.35);
+            border: 1px solid var(--betsie-coral);
             border-radius: 10px;
-            background: rgba(243, 109, 111, 0.08);
-            color: #8C2A2B;
+            background: rgba(243, 109, 111, 0.06);
+            color: var(--text-primary);
             font-size: 0.86rem;
             font-weight: 700;
             cursor: pointer;
@@ -632,9 +701,9 @@
         }
 
         .choice.active {
-            border-color: rgba(243, 109, 111, 0.7);
-            background: rgba(243, 109, 111, 0.1);
-            color: #8C2A2B;
+            border: 1px solid var(--betsie-coral);
+            background: rgba(243, 109, 111, 0.06);
+            color: var(--betsie-coral);
         }
 
         .countdown {
@@ -705,6 +774,18 @@
             letter-spacing: -0.01em;
         }
 
+        .modal-title--share-handoff-confirm {
+            text-align: center;
+            font-size: clamp(1.02rem, 4.2vw, 1.28rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.12;
+            white-space: nowrap;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .modal-text {
             margin: 8px 0 14px;
             color: var(--text-secondary);
@@ -718,7 +799,7 @@
         }
 
         .modal-hint {
-            margin: 0 0 12px;
+            margin: 10px 0 0;
             padding: 10px 12px;
             background: var(--surface);
             border-radius: 12px;
@@ -748,6 +829,66 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color: var(--text-secondary);
+        }
+
+        .modal-summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 0 0 8px;
+        }
+
+        .modal-summary-header .modal-summary-caption {
+            margin: 0;
+        }
+
+        .modal-summary-edit {
+            border: 0;
+            background: none;
+            padding: 0;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--betsie-coral);
+            cursor: pointer;
+            text-decoration: underline;
+            flex-shrink: 0;
+        }
+
+        .modal-summary-edit:hover {
+            color: #d85a5c;
+        }
+
+        .modal-summary-edit:focus-visible {
+            outline: 2px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
+        }
+
+        .share-handoff-copy-hidden {
+            display: none;
+        }
+
+        .preview-accept-wrap {
+            margin: 12px 0 0;
+            text-align: center;
+        }
+
+        .preview-accept-link {
+            color: var(--betsie-coral);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: underline;
+        }
+
+        .preview-accept-link:hover {
+            color: #d85a5c;
+        }
+
+        .preview-accept-link:focus-visible {
+            outline: 2px solid rgba(243, 109, 111, 0.35);
+            outline-offset: 2px;
+            border-radius: 4px;
         }
 
         .modal-summary-row {
@@ -848,7 +989,6 @@
 
         @media (max-width: 600px) {
             .value-prop {
-                max-width: 220px;
                 text-align: right;
                 font-size: 0.9rem;
             }
@@ -859,16 +999,15 @@
     <header class="site-header">
         <div class="header-brand">
             <button id="logo-button" class="logo-button" type="button" aria-label="Open start fresh options">
-                <img src="/betsie-app-logo.png" alt="Betsie logo" class="panel-logo">
+                <img src="/Betsie-Wordmark-Red.png" alt="Betsie wordmark logo" class="panel-logo">
             </button>
-            <p class="header-brand-label">Betsie Lite</p>
         </div>
-        <p class="value-prop">Create a friendly bet<br>in under a minute.</p>
+        <p class="value-prop">Bets with your Besties</p>
     </header>
     <main id="app" class="panel" aria-live="polite"></main>
     <footer class="site-footer">
         <a href="https://betsie.app" target="_blank" rel="noopener noreferrer">Betsie</a> is a trademark of
-        <a href="https://squeakycheeseinc.com" target="_blank" rel="noopener noreferrer">Squeeky Cheese, Inc.</a>
+        <a href="https://squeakycheeseinc.com" target="_blank" rel="noopener noreferrer">Squeaky Cheese, Inc.</a>
     </footer>
     <div id="fresh-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="fresh-modal-title">
         <div class="modal-card">
@@ -897,12 +1036,11 @@
             <h2 id="share-handoff-title" class="modal-title"></h2>
             <p id="share-handoff-body" class="modal-text"></p>
             <div id="share-handoff-summary" class="modal-summary" hidden></div>
-            <p id="share-handoff-hint" class="modal-hint" aria-live="polite"></p>
             <div class="modal-actions">
                 <button id="share-handoff-primary" class="cta" type="button"></button>
-                <button id="share-handoff-copy" class="ghost" type="button">Copy message</button>
-                <button id="share-handoff-edit" class="ghost" type="button">Edit my bet</button>
+                <button id="share-handoff-copy" class="ghost share-handoff-copy-hidden" type="button" tabindex="-1" aria-hidden="true">Copy message</button>
             </div>
+            <p id="share-handoff-hint" class="modal-hint" aria-live="polite"></p>
         </div>
     </div>
     <div id="early-end-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="early-end-modal-title">
@@ -1197,6 +1335,20 @@
             return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
         }
 
+        function formatBetEndsLineDate(value) {
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) {
+                return "—";
+            }
+            return d.toLocaleString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit"
+            });
+        }
+
         function formatCountdown(target) {
             const remaining = new Date(target).getTime() - Date.now();
             if (remaining <= 0) {
@@ -1340,12 +1492,11 @@
                     rows.push(["Trash talk", trashTalk]);
                 }
             } else {
-                rows.push(["You", challengerName || "—"]);
+                rows.push(["The Bet", title || "—"]);
                 rows.push(["Your position", p2 || "—"]);
-                rows.push(["Creator bet", title || "—"]);
-                if (challengerTrashTalk) {
-                    rows.push(["Trash talk", challengerTrashTalk]);
-                }
+                rows.push(["Trash talk", challengerTrashTalk || "—"]);
+                rows.push(["Your name", challengerName || "—"]);
+                rows.push(["Bet ends", deadline ? formatBetEndsLineDate(deadline) : "—"]);
             }
             return rows
                 .map(
@@ -1364,23 +1515,28 @@
             const hintEl = document.getElementById("share-handoff-hint");
             const primaryEl = document.getElementById("share-handoff-primary");
             summaryEl.removeAttribute("hidden");
-            summaryEl.innerHTML = `<p class="modal-summary-caption">Your details</p>${buildShareHandoffSummaryRows(role)}`;
+            const detailsCaption = "Bet Details";
+            summaryEl.innerHTML = `
+                <div class="modal-summary-header">
+                    <p class="modal-summary-caption">${detailsCaption}</p>
+                    <button type="button" class="modal-summary-edit" id="share-handoff-edit-link">Edit</button>
+                </div>
+                ${buildShareHandoffSummaryRows(role)}
+            `;
             if (role === "creator") {
-                const who = (challengerLabel || "").trim() || "your friend";
-                titleEl.textContent = `Send this link to ${who}`;
-                bodyEl.textContent =
-                    "Betsie Lite has no login, so your friend needs you to send the challenge link below.";
+                titleEl.textContent = "Confirm bet details";
+                titleEl.className = "modal-title modal-title--share-handoff-confirm";
+                bodyEl.textContent = "Make sure everything looks good before you share with a friend.";
                 hintEl.textContent =
                     "Next: your device opens a share sheet or picker. Choose Messages, WhatsApp, or another chat where you already talk, then send the link.";
-                primaryEl.textContent = "Share challenge link";
+                primaryEl.textContent = "Confirm and send";
             } else {
-                const who = (creatorLabel || "").trim() || "the creator";
-                titleEl.textContent = `Send the updated link back to ${who}`;
-                bodyEl.textContent =
-                    "Betsie Lite has no login, so the creator needs you to send the confirmation link below.";
+                titleEl.textContent = "Confirm your position";
+                titleEl.className = "modal-title modal-title--share-handoff-confirm";
+                bodyEl.textContent = "Make sure everything looks good before you lock in.";
                 hintEl.textContent =
-                    "Next: Click share to send the link in iMessage, WhatsApp, or copy it — they need this version, not an older message.";
-                primaryEl.textContent = "Share confirmation link";
+                    "Next: your device opens a share sheet or picker. Choose Messages, WhatsApp, or another chat where you already talk, then send the link.";
+                primaryEl.textContent = "Confirm and send";
             }
             shareHandoffModal.classList.remove("is-hidden");
             primaryEl.focus();
@@ -1390,6 +1546,8 @@
             shareHandoffModal.classList.add("is-hidden");
             shareHandoffState.role = null;
             shareHandoffState.url = "";
+            const titleEl = document.getElementById("share-handoff-title");
+            titleEl.className = "modal-title";
             const summaryEl = document.getElementById("share-handoff-summary");
             summaryEl.setAttribute("hidden", "");
             summaryEl.innerHTML = "";
@@ -1569,13 +1727,16 @@
                 updateUrl("active", { src: "accept", cr: "1" });
             }
         });
-        document.getElementById("share-handoff-edit").addEventListener("click", () => {
-            trackBetsieEvent("betsie_share_handoff", { action: "edit_bet", role: shareHandoffState.role });
-            navigateFromHandoffEdit();
-        });
         shareHandoffModal.addEventListener("click", (event) => {
             if (event.target === shareHandoffModal) {
                 closeShareHandoffModal();
+                return;
+            }
+            const editTrigger = event.target.closest("#share-handoff-edit-link");
+            if (editTrigger) {
+                event.preventDefault();
+                trackBetsieEvent("betsie_share_handoff", { action: "edit_bet", role: shareHandoffState.role });
+                navigateFromHandoffEdit();
             }
         });
         document.getElementById("early-end-confirm").addEventListener("click", () => {
@@ -1612,7 +1773,7 @@
 
         function renderLanding() {
             app.innerHTML = `
-                <h1>How Betsie Lite works</h1>
+                <h1>Create a friendly bet in under a minute.</h1>
                 <p class="subtitle">Challenge a friend, pass each other links, and keep the vibes competitive. No account needed.</p>
                 <section class="list" aria-label="Betsie highlights">
                     <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, details, and deadline.</div>
@@ -1620,7 +1781,7 @@
                     <div class="item"><span class="icon" aria-hidden="true">3</span>Track countdown and settle with bragging rights.</div>
                 </section>
                 <button id="start-bet" class="cta" type="button">Start your first bet</button>
-                <p class="meta">Fast setup<span class="dot">•</span>Mobile first<span class="dot">•</span><strong>Share-ready</strong></p>
+                <p class="meta" style="color: #002cfc;">No email or account required!</p>
             `;
             document.getElementById("start-bet").addEventListener("click", () => {
                 trackBetsieEvent("betsie_cta", { cta_id: "start_first_bet", location: "landing" });
@@ -1637,11 +1798,11 @@
             };
             return `
                 <nav class="creator-breadcrumb" aria-label="Creator progress">
-                    <button type="button" class="crumb ${step === "create" ? "is-current" : currentIndex > 0 ? "is-complete" : ""}" data-creator-step="create" ${canVisit("create") ? "" : "disabled"}>Create</button>
-                    <span class="crumb-sep" aria-hidden="true">/</span>
-                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : currentIndex > 1 ? "is-complete" : ""}" data-creator-step="confirm" ${canVisit("confirm") ? "" : "disabled"}>Confirm</button>
-                    <span class="crumb-sep" aria-hidden="true">/</span>
-                    <button type="button" class="crumb ${step === "invite" ? "is-current" : ""}" data-creator-step="invite" ${canVisit("invite") ? "" : "disabled"}>Invite</button>
+                    <button type="button" class="crumb ${step === "create" ? "is-current" : currentIndex > 0 ? "is-complete" : ""}" data-step-number="01" data-creator-step="create" ${canVisit("create") ? "" : "disabled"}>Create</button>
+                    <span class="crumb-sep" aria-hidden="true"></span>
+                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : currentIndex > 1 ? "is-complete" : ""}" data-step-number="02" data-creator-step="confirm" ${canVisit("confirm") ? "" : "disabled"}>Confirm</button>
+                    <span class="crumb-sep" aria-hidden="true"></span>
+                    <button type="button" class="crumb ${step === "invite" ? "is-current" : ""}" data-step-number="03" data-creator-step="invite" ${canVisit("invite") ? "" : "disabled"}>Invite</button>
                 </nav>
             `;
         }
@@ -1667,11 +1828,11 @@
         function renderChallengerBreadcrumb(step) {
             return `
                 <nav class="creator-breadcrumb" aria-label="Challenger progress">
-                    <button type="button" class="crumb ${step === "accept" ? "is-current" : "is-complete"}" data-challenger-step="accept" ${step === "accept" ? "" : "disabled"}>Accept</button>
-                    <span class="crumb-sep" aria-hidden="true">/</span>
-                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : step === "respond" ? "is-complete" : ""}" data-challenger-step="confirm">Confirm</button>
-                    <span class="crumb-sep" aria-hidden="true">/</span>
-                    <button type="button" class="crumb ${step === "respond" ? "is-current" : ""}" data-challenger-step="respond" ${step === "respond" ? "" : "disabled"}>Game On</button>
+                    <button type="button" class="crumb ${step === "accept" ? "is-current" : "is-complete"}" data-step-number="01" data-challenger-step="accept" ${step === "accept" ? "" : "disabled"}>Accept</button>
+                    <span class="crumb-sep" aria-hidden="true"></span>
+                    <button type="button" class="crumb ${step === "confirm" ? "is-current" : step === "respond" ? "is-complete" : ""}" data-step-number="02" data-challenger-step="confirm">Confirm</button>
+                    <span class="crumb-sep" aria-hidden="true"></span>
+                    <button type="button" class="crumb ${step === "respond" ? "is-current" : ""}" data-step-number="03" data-challenger-step="respond" ${step === "respond" ? "" : "disabled"}>Game On</button>
                 </nav>
             `;
         }
@@ -1694,8 +1855,7 @@
             const minDeadlineValue = nowLocalInputValue();
             app.innerHTML = `
                 ${renderCreatorBreadcrumb("create")}
-                <h1>Create your challenge</h1>
-                <p class="subtitle">Write a prediction, set a deadline, then share one link.</p>
+                <h1>Create your bet</h1>
                 <form id="create-form">
                     <div>
                         <div class="label-row">
@@ -1706,23 +1866,23 @@
                     </div>
                     <div>
                         <div class="label-row">
-                            <label for="bet-title">I claim that...</label>
+                            <label for="bet-title">I bet...</label>
                             <span id="bet-title-count" class="char-count" aria-live="polite"></span>
                         </div>
-                        <input id="bet-title" name="title" type="text" maxlength="${FIELD_LIMITS.claim}" required placeholder="I will finish my marathon" value="${escapeHtml(title)}">
+                        <input id="bet-title" name="title" type="text" maxlength="${FIELD_LIMITS.claim}" required placeholder="Robin and Jules will hook up" value="${escapeHtml(title)}">
                     </div>
                     <div>
-                        <label for="bet-deadline">Deadline</label>
-                        <input id="bet-deadline" name="deadline" type="datetime-local" required min="${minDeadlineValue}" value="${deadlineFieldValue}">
+                        <label for="bet-deadline">Bet ends</label>
+                        <input id="bet-deadline" name="deadline" type="datetime-local" step="60" required min="${minDeadlineValue}" value="${deadlineFieldValue}">
                     </div>
                     <div>
                         <div class="label-row">
                             <label for="bet-trash-talk">Trash talk</label>
                             <span id="bet-trash-talk-count" class="char-count" aria-live="polite"></span>
                         </div>
-                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional (example: Prove me wrong.)" value="${escapeHtml(trashTalk)}">
+                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional, but highly encouraged" value="${escapeHtml(trashTalk)}">
                     </div>
-                    <button class="cta" type="submit">Lock in bet</button>
+                    <button class="cta" type="submit">Next</button>
                 </form>
             `;
             bindCharCounter("creator-name", "creator-name-count", FIELD_LIMITS.name);
@@ -1734,7 +1894,7 @@
                 const deadlineValue = String(form.get("deadline") || "");
                 const parsedDeadline = new Date(deadlineValue);
                 if (!deadlineValue || Number.isNaN(parsedDeadline.getTime()) || parsedDeadline.getTime() < Date.now()) {
-                    alert("Please choose a deadline that is now or later.");
+                    alert("Please choose a bet end time that is now or later.");
                     return;
                 }
                 trackBetsieEvent("betsie_form_submit", { form_id: "create_bet", has_trash_talk: form.get("trashTalk") ? "yes" : "no" });
@@ -1763,7 +1923,7 @@
             const creatorAvatar = avatarLetters(creatorName, "Creator");
             const challengerAvatar = avatarLetters(challengerName, "Challenger");
             const escapedP2 = escapeHtml(p2);
-            const challengerPosition = p2 ? escapedP2 : "Waiting for acceptance";
+            const challengerPosition = p2 ? escapedP2 : "Waiting for reply";
             const escapedCreatorTrashTalk = escapeHtml(trashTalk);
             const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             const acceptedFromChallenger = source === "accept";
@@ -1772,7 +1932,7 @@
             const hasInvitedChallenger = invited === "1";
             const flowStep = hasChallengerAccepted || hasInvitedChallenger ? "invite" : "confirm";
             const inviteButtonText = hasInvitedChallenger ? "Send a reminder" : "Invite challenger";
-            const inviteButtonClass = hasInvitedChallenger ? "ghost" : "cta";
+            const inviteButtonClass = "cta";
             const hasChallengerSentConfirmation = challengerResponded === "1";
             const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
             const challengerButtonText = hasChallengerSentConfirmation ? "Re-share confirmation link" : "Send confirmation link";
@@ -1812,8 +1972,8 @@
             const parsedEarlyEndedAt = earlyEndedAt ? new Date(earlyEndedAt) : null;
             const hasEarlyEndedTimestamp = Boolean(parsedEarlyEndedAt && !Number.isNaN(parsedEarlyEndedAt.getTime()));
             const betTimingLabel = forceVotingPeriod && hasEarlyEndedTimestamp
-                ? `Bet ended: ${parsedEarlyEndedAt.toLocaleString()}`
-                : `Bet ends: ${new Date(deadline).toLocaleString()}`;
+                ? `Bet ended: ${formatBetEndsLineDate(parsedEarlyEndedAt)}`
+                : `Bet ends: ${formatBetEndsLineDate(deadline)}`;
             const samePosition = challengerAgreesWithCreator;
             const creatorVoteLabel = samePosition ? "Both Right!" : `${escapedCreatorName} Won!`;
             const challengerVoteLabel = samePosition ? "Both Wrong!" : `${escapedChallengerName} Won!`;
@@ -1823,7 +1983,7 @@
                 ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
-                <p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
+                <p class="subtitle bet-timing-line" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
                 ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="call-bet-early-link" class="pill yes call-bet-early-pill" type="button">Call the bet early</button></p>' : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
@@ -1836,7 +1996,7 @@
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
-                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
+                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "&nbsp;"}</div>
                     </article>
                 </section>
                 <div class="voting-actions${votingPeriod ? "" : " is-hidden"}">
@@ -1849,7 +2009,7 @@
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button"${disableChallengerReshare ? " disabled aria-disabled=\"true\"" : ""}>${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
-                ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
+                ${p2 || votingPeriod ? "" : '<p class="preview-accept-wrap"><a id="accept-preview" class="preview-accept-link" href="#">Preview what they\'ll see</a></p>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
@@ -1901,7 +2061,8 @@
                 });
             }
             if (!p2 && !votingPeriod && document.getElementById("accept-preview")) {
-                document.getElementById("accept-preview").addEventListener("click", () => {
+                document.getElementById("accept-preview").addEventListener("click", (event) => {
+                    event.preventDefault();
                     trackBetsieEvent("betsie_preview", { target: "challenger_accept_link" });
                     updateUrl("accept");
                 });
@@ -1997,13 +2158,9 @@
             } catch (_) {
                 acceptDraft = null;
             }
-            const creatorPossessive = creatorName.trim()
-                ? `${escapeHtml(creatorName)}'s`
-                : "the creator's";
             const agreeWithCreatorLabel = creatorName.trim()
                 ? `Agree with ${escapeHtml(creatorName)}`
                 : "Agree with creator";
-            const creatorDisplayName = creatorName.trim() || "Your friend";
             const creatorBetsLabel = creatorName.trim()
                 ? `${escapeHtml(creatorName)} bets that...`
                 : "Creator bets that...";
@@ -2023,7 +2180,7 @@
                     <div class="competitor-quote">${trashTalk ? `"${escapeHtml(trashTalk)}"` : "\"No comment.\""}</div>
                 </article>
                 <form id="accept-form">
-                    <p class="subtitle accept-instruction">Write your response to ${creatorPossessive} prediction. You can agree or make your own prediction.</p>
+                    <h2 class="accept-form-heading">Your response</h2>
                     <div>
                         <div class="label-row">
                             <label for="challenger-name">Your name</label>
@@ -2038,18 +2195,18 @@
                         </div>
                         <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
                             <button id="agree-option" class="choice${startWithAgree ? " active" : ""}" type="button" aria-pressed="${startWithAgree}">${agreeWithCreatorLabel}</button>
-                            <button id="custom-option" class="choice${startWithAgree ? "" : " active"}" type="button" aria-pressed="${!startWithAgree}">Use my own prediction</button>
+                            <button id="custom-option" class="choice${startWithAgree ? "" : " active"}" type="button" aria-pressed="${!startWithAgree}">Make a different call</button>
                         </div>
-                        <input id="challenger-position" name="position" type="text" maxlength="${FIELD_LIMITS.claim}" required value="${positionFieldValue}" placeholder="your response prediction"${startWithAgree ? " disabled" : ""}>
+                        <input id="challenger-position" name="position" type="text" maxlength="${FIELD_LIMITS.claim}" required value="${positionFieldValue}" placeholder="your prediction..."${startWithAgree ? " disabled" : ""}>
                     </div>
                     <div>
                         <div class="label-row">
                             <label for="challenger-trash-talk">Trash talk</label>
                             <span id="challenger-trash-talk-count" class="char-count" aria-live="polite"></span>
                         </div>
-                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional comeback" value="${draftCtValue}">
+                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional, but highly encouraged" value="${draftCtValue}">
                     </div>
-                    <button class="cta" type="submit">Lock in bet</button>
+                    <button class="cta" type="submit">Next</button>
                 </form>
             `;
             const agreeOption = document.getElementById("agree-option");
