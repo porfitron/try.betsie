@@ -168,6 +168,16 @@
             line-height: 1.45;
         }
 
+        .site-footer a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .site-footer a:hover,
+        .site-footer a:focus-visible {
+            text-decoration: underline;
+        }
+
         .brand-row {
             display: flex;
             align-items: center;
@@ -770,7 +780,10 @@
         <p class="value-prop">Create a friendly bet<br>in under a minute.</p>
     </header>
     <main id="app" class="panel" aria-live="polite"></main>
-    <footer class="site-footer">Betsie is a trademark of Squeaky Cheese, Inc.</footer>
+    <footer class="site-footer">
+        <a href="https://betsie.app" target="_blank" rel="noopener noreferrer">Betsie</a> is a trademark of
+        <a href="https://squeakycheeseinc.com" target="_blank" rel="noopener noreferrer">Squeeky Cheese, Inc.</a>
+    </footer>
     <div id="fresh-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="fresh-modal-title">
         <div class="modal-card">
             <h2 id="fresh-modal-title" class="modal-title">Start fresh?</h2>
