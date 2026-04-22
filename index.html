@@ -750,7 +750,7 @@
         function formatCountdown(target) {
             const remaining = new Date(target).getTime() - Date.now();
             if (remaining <= 0) {
-                return "Bet Completed";
+                return "Pick Your Winner";
             }
             const hours = Math.floor(remaining / 3600000);
             const minutes = Math.floor((remaining % 3600000) / 60000);
@@ -1245,6 +1245,9 @@
                 return shareUrl.toString();
             })();
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
+            const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
+            const creatorVoteLabel = samePosition ? "Both Right!" : "Creator Won!";
+            const challengerVoteLabel = samePosition ? "Both Wrong!" : "Challenger Won!";
             const showCreatorWaitingForConfirmation =
                 isCreatorView && flowStep === "invite" && !hasChallengerSentConfirmation;
             app.innerHTML = `
@@ -1257,14 +1260,14 @@
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapedTitle}</div>
                         ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
-                        <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Creator Won!</button>
+                        <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${creatorVoteLabel}</button>
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
                         ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
-                        <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">Challenger Won!</button>
+                        <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${challengerVoteLabel}</button>
                     </article>
                 </section>
                 <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
@@ -1377,13 +1380,13 @@
             const el = document.getElementById("countdown");
             const timer = setInterval(() => {
                 el.textContent = formatCountdown(deadline);
-                if (el.textContent === "Bet Completed") {
+                if (el.textContent === "Pick Your Winner") {
                     setVotingPeriod(true);
                     clearInterval(timer);
                 }
             }, 1000);
             el.textContent = formatCountdown(deadline);
-            setVotingPeriod(el.textContent === "Bet Completed");
+            setVotingPeriod(el.textContent === "Pick Your Winner");
         }
 
         function renderAccept() {
@@ -1495,33 +1498,57 @@
         }
 
         function renderSettle() {
-            const name = winner === "1" ? "Creator" : winner === "2" ? "Challenger" : "";
+            const creatorDisplayName = creatorName.trim() || "Creator";
+            const challengerDisplayName = challengerName.trim() || "Challenger";
+            const name = winner === "1" ? creatorDisplayName : winner === "2" ? challengerDisplayName : "";
+            const samePosition = Boolean(p2) && String(p2).trim() === String(title).trim();
+            const settleHeadline = (() => {
+                if (samePosition && winner === "1") {
+                    return "Both win this round";
+                }
+                if (samePosition && winner === "2") {
+                    return "Both lose this round";
+                }
+                if (name) {
+                    return `${name} wins this round`;
+                }
+                return "Deadline reached";
+            })();
             const escapedCreatorName = escapeHtml(creatorName || "Creator");
             const escapedChallengerName = escapeHtml(challengerName || "Challenger");
             const creatorAvatar = avatarLetters(creatorName, "Creator");
             const challengerAvatar = avatarLetters(challengerName, "Challenger");
+            const escapedCreatorTrashTalk = escapeHtml(trashTalk);
+            const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             app.innerHTML = `
                 <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Settlement</span></div>
-                <h1>${name ? `${name} wins this round` : "Deadline reached"}</h1>
-                <p class="subtitle">${title ? `Bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
-                ${trashTalk ? `<p class="subtitle">Talk before the bet: "${escapeHtml(trashTalk)}"</p>` : ""}
+                <p class="subtitle" style="text-align: center;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                <h1>${settleHeadline}</h1>
                 <section class="matchup" aria-label="Final head to head">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
-                        <div class="competitor-position">I bet that...<br>${escapeHtml(title || "-")}</div>
+                        <div class="competitor-position">${escapeHtml(title || "-")}</div>
+                        ${trashTalk ? `<div class="competitor-quote">"${escapedCreatorTrashTalk}"</div>` : ""}
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
+                        ${challengerTrashTalk ? `<div class="competitor-quote">"${escapedChallengerTrashTalk}"</div>` : ""}
                     </article>
                 </section>
                 ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
-                <button id="share-result" class="ghost" type="button">Share result</button>
+                <button id="share-result" class="cta" type="button">Share result</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
-                <div class="banner">Confetti coming in Phase 3. For now, claim your bragging rights.</div>
+                <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
+            const promoLink = document.getElementById("betsie-app-promo");
+            if (promoLink) {
+                promoLink.addEventListener("click", () => {
+                    trackBetsieEvent("betsie_outbound_click", { link_id: "app_download_promo", destination: "betsie_app_download" });
+                });
+            }
             if (!winner) {
                 document.getElementById("creator-wins").addEventListener("click", () => {
                     trackBetsieEvent("betsie_settle_pick", { choice: "creator", phase: "settle_screen" });
