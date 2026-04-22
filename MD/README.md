@@ -1,11 +1,12 @@
 # Betsie Lite (PWA)
 
-Betsie Lite is a lightweight, serverless web version of the Betsie social betting platform. It is designed to facilitate quick 1-on-1 bets through URL-based state management, allowing users to create, share, and settle bets without creating an account.
+Betsie Lite is a lightweight, backend-less head unit for the messaging app people already use, whether that is iMessage, SMS, or WhatsApp. It helps users compose, share, and settle quick 1-on-1 bets through URL-based state management, without creating an account.
 
 ## Technical Philosophy
-- **Stateless:** Bet data is stored in the URL query parameters. No backend database required for the "lite" experience.
-- **PWA First:** Built with vanilla HTML, CSS, and JS. Installable to the home screen with offline-ready properties.
-- **Viral Loop:** Focuses on the "Share -> Challenge -> Result" flow via messaging apps (iMessage, WhatsApp, etc.).
+- **Backend-less by Design:** Bet data is stored in URL query parameters; no backend database or user accounts for the Lite experience.
+- **Chat-Native Head Unit:** The web app is the control panel, while the user's preferred chat app is the transport and context layer.
+- **PWA First:** Built with vanilla HTML, CSS, and JS, installable to the home screen with offline-ready properties.
+- **Share Loop:** Optimize the "Compose -> Share -> Challenge -> Settle" loop inside existing message threads.
 
 ## Tech Stack
 - HTML5 / CSS3 (Modern Flexbox/Grid)

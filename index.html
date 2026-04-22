@@ -289,6 +289,24 @@
             line-height: 1.5;
         }
 
+        .accept-creator-preview {
+            margin: 8px 0 10px;
+        }
+
+        .accept-creator-preview .competitor-quote {
+            color: #15803d;
+        }
+
+        .accept-creator-preview .competitor-position {
+            font-size: clamp(1.25rem, 5vw, 1.5rem);
+            line-height: 1.25;
+            font-weight: 700;
+        }
+
+        .accept-instruction {
+            margin-bottom: 8px;
+        }
+
         .list {
             display: grid;
             gap: 10px;
@@ -411,6 +429,13 @@
             background: #FFF;
             padding: 12px;
             text-align: center;
+        }
+
+        .voting-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: -2px 0 12px;
         }
 
         .competitor.is-winner {
@@ -537,6 +562,18 @@
             cursor: pointer;
         }
 
+        .winner-btn:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.15);
+            color: #0F6B4B;
+        }
+
+        .winner-btn.both-right {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.14);
+            color: #0F6B4B;
+        }
+
         .winner-btn:focus-visible {
             outline: 3px solid rgba(243, 109, 111, 0.35);
             outline-offset: 2px;
@@ -563,6 +600,17 @@
         .pill.no {
             color: var(--ruby);
             background: rgba(239, 68, 68, 0.1);
+        }
+
+        .call-bet-early-pill {
+            border: 0;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #166534;
         }
 
         .choice {
@@ -718,6 +766,22 @@
             word-break: break-word;
         }
 
+        .label-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .char-count {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+            text-transform: none;
+        }
+
         .celebration-overlay {
             position: fixed;
             inset: 0;
@@ -828,7 +892,7 @@
             <p id="share-handoff-hint" class="modal-hint" aria-live="polite"></p>
             <div class="modal-actions">
                 <button id="share-handoff-primary" class="cta" type="button"></button>
-                <button id="share-handoff-copy" class="ghost" type="button">Copy link</button>
+                <button id="share-handoff-copy" class="ghost" type="button">Copy message</button>
                 <button id="share-handoff-edit" class="ghost" type="button">Edit my bet</button>
             </div>
         </div>
@@ -871,6 +935,26 @@
         const HASH_STATE_VERSION = 1;
         const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf", "ev", "ee"];
         const SEARCH_FALLBACK_KEYS = ["mode", "t", "d", "cn", "chn", "p1", "p2", "tt", "ct", "src", "cr", "ev", "ee"];
+        const FIELD_LIMITS = {
+            name: 20,
+            claim: 70,
+            trashTalk: 45
+        };
+
+        function normalizeSingleLine(value) {
+            return String(value || "")
+                .replace(/[\r\n\t]+/g, " ");
+        }
+
+        function clampText(value, maxLength) {
+            return normalizeSingleLine(value).slice(0, maxLength);
+        }
+
+        function cleanFieldText(value, maxLength) {
+            return clampText(value, maxLength)
+                .replace(/\s+/g, " ")
+                .trim();
+        }
 
         function readStateFromSearchParams(searchParams) {
             const state = {};
@@ -955,14 +1039,14 @@
             return merged;
         })();
         const mode = params.get("mode");
-        const title = params.get("t") || "";
-        const creatorName = params.get("cn") || "";
-        const challengerName = params.get("chn") || "";
+        const title = clampText(params.get("t") || "", FIELD_LIMITS.claim);
+        const creatorName = clampText(params.get("cn") || "", FIELD_LIMITS.name);
+        const challengerName = clampText(params.get("chn") || "", FIELD_LIMITS.name);
         const p1 = params.get("p1") || "For";
-        const p2 = params.get("p2") || "";
+        const p2 = clampText(params.get("p2") || "", FIELD_LIMITS.claim);
         const deadline = params.get("d") || "";
-        const trashTalk = params.get("tt") || "";
-        const challengerTrashTalk = params.get("ct") || "";
+        const trashTalk = clampText(params.get("tt") || "", FIELD_LIMITS.trashTalk);
+        const challengerTrashTalk = clampText(params.get("ct") || "", FIELD_LIMITS.trashTalk);
         const winner = params.get("w") || "";
         const source = params.get("src") || "";
         const creatorStep = params.get("cs") || "";
@@ -1010,6 +1094,81 @@
                 return fallback.slice(0, 2).toUpperCase();
             }
             return compact.slice(0, 2).toUpperCase();
+        }
+
+        function bindCharCounter(inputId, counterId, maxLength) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (!input || !counter) {
+                return;
+            }
+            const update = () => {
+                const next = clampText(input.value, maxLength);
+                if (next !== input.value) {
+                    input.value = next;
+                }
+                counter.textContent = `${next.length}/${maxLength}`;
+            };
+            update();
+            input.addEventListener("input", update);
+        }
+
+        function composeShareText(shareContext) {
+            const claim = cleanFieldText(title, FIELD_LIMITS.claim) || "I made a new challenge.";
+            const creatorHook = cleanFieldText(trashTalk, FIELD_LIMITS.trashTalk) || "Prove me wrong.";
+            const challengerHook = cleanFieldText(challengerTrashTalk, FIELD_LIMITS.trashTalk);
+            const challengerPosition = cleanFieldText(p2, FIELD_LIMITS.claim);
+            const creatorLabel = cleanFieldText(creatorName, FIELD_LIMITS.name) || "Creator";
+            const challengerLabel = cleanFieldText(challengerName, FIELD_LIMITS.name) || "Challenger";
+            if (shareContext === "creator_reminder") {
+                return "Still waiting on your response.\nCall my bluff.";
+            }
+            if (shareContext.startsWith("creator_")) {
+                return `${claim}\n${creatorHook}`;
+            }
+            if (shareContext.startsWith("challenger_")) {
+                const lineOne = challengerPosition ? `I'm taking: ${challengerPosition}` : "I accepted your challenge.";
+                const lineTwo = challengerHook || "Game on.";
+                return `${lineOne}\n${lineTwo}`;
+            }
+            if (shareContext === "settle_result") {
+                const samePosition = Boolean(challengerPosition) && challengerPosition === claim;
+                const lines = [];
+                if (winner === "0") {
+                    lines.push("Result: no contest.");
+                } else if (samePosition && winner === "1") {
+                    lines.push("Result: both were right.");
+                } else if (samePosition && winner === "2") {
+                    lines.push("Result: both were wrong.");
+                } else if (winner === "1") {
+                    lines.push(`${creatorLabel} was right about ${claim}.`);
+                } else if (winner === "2") {
+                    lines.push(`${challengerLabel} was right about ${challengerPosition || claim}.`);
+                } else {
+                    lines.push("Result is in.");
+                }
+                if (!samePosition && winner === "1") {
+                    if (challengerPosition) {
+                        lines.push(`${challengerLabel} thought ${challengerPosition}.`);
+                    }
+                } else if (!samePosition && winner === "2") {
+                    lines.push(`${creatorLabel} thought ${claim}.`);
+                } else {
+                    lines.push(`${creatorLabel}: ${claim}`);
+                    if (challengerPosition) {
+                        lines.push(`${challengerLabel}: ${challengerPosition}`);
+                    }
+                }
+                if (samePosition && winner === "1") {
+                    lines.push("Mutual W.");
+                } else if (samePosition && winner === "2") {
+                    lines.push("Nobody called it this time.");
+                } else if (winner === "0") {
+                    lines.push("No winner on this one.");
+                }
+                return lines.join("\n");
+            }
+            return "It's happening now, on Betsie Lite.";
         }
 
         function toDatetimeLocalInputValue(raw) {
@@ -1286,9 +1445,11 @@
 
         async function shareCurrentLink(shareUrl = window.location.href, analytics = {}) {
             const normalizedShareUrl = toCompressedHashUrl(shareUrl);
+            const shareContext = analytics.share_context || "general";
+            const shareText = composeShareText(shareContext);
             const shareData = {
                 title: "Betsie challenge",
-                text: "It's happening now, on Betsie Lite.",
+                text: shareText,
                 url: normalizedShareUrl
             };
             try {
@@ -1301,9 +1462,9 @@
                 // Fallback to clipboard when share is cancelled or unavailable.
             }
             if (navigator.clipboard) {
-                await navigator.clipboard.writeText(normalizedShareUrl);
+                await navigator.clipboard.writeText(`${shareText}\n${normalizedShareUrl}`);
                 trackBetsieEvent("betsie_share", { share_method: "clipboard", ...analytics });
-                alert("Challenge link copied.");
+                alert("Share message copied.");
             }
         }
 
@@ -1379,17 +1540,19 @@
             }
             const role = shareHandoffState.role;
             const handoffUrl = shareHandoffState.url;
+            const shareContext = role === "creator" ? "creator_handoff_copy" : "challenger_handoff_copy";
+            const shareText = composeShareText(shareContext);
             trackBetsieEvent("betsie_share_handoff", { action: "copy_link", role });
             if (navigator.clipboard) {
-                await navigator.clipboard.writeText(handoffUrl);
+                await navigator.clipboard.writeText(`${shareText}\n${handoffUrl}`);
                 trackBetsieEvent("betsie_share", {
                     share_method: "clipboard",
-                    share_context: role === "creator" ? "creator_handoff_copy" : "challenger_handoff_copy"
+                    share_context: shareContext
                 });
                 alert(
                     role === "creator"
-                        ? "Challenge link copied — paste it into your chat with your friend."
-                        : "Confirmation link copied — paste it into your chat with the creator."
+                        ? "Invite message copied — paste it into your chat with your friend."
+                        : "Confirmation message copied — paste it into your chat with the creator."
                 );
             }
             closeShareHandoffModal();
@@ -1528,24 +1691,36 @@
                 <p class="subtitle">Write a prediction, set a deadline, then share one link.</p>
                 <form id="create-form">
                     <div>
-                        <label for="creator-name">Your name</label>
-                        <input id="creator-name" name="creatorName" type="text" maxlength="40" required placeholder="or what people call you" value="${escapeHtml(creatorName)}">
+                        <div class="label-row">
+                            <label for="creator-name">Your name</label>
+                            <span id="creator-name-count" class="char-count" aria-live="polite"></span>
+                        </div>
+                        <input id="creator-name" name="creatorName" type="text" maxlength="${FIELD_LIMITS.name}" required placeholder="or what people call you" value="${escapeHtml(creatorName)}">
                     </div>
                     <div>
-                        <label for="bet-title">I bet that...</label>
-                        <input id="bet-title" name="title" type="text" maxlength="100" required placeholder="Jules and Robin will hook up" value="${escapeHtml(title)}">
+                        <div class="label-row">
+                            <label for="bet-title">I claim that...</label>
+                            <span id="bet-title-count" class="char-count" aria-live="polite"></span>
+                        </div>
+                        <input id="bet-title" name="title" type="text" maxlength="${FIELD_LIMITS.claim}" required placeholder="I will finish my marathon" value="${escapeHtml(title)}">
                     </div>
                     <div>
                         <label for="bet-deadline">Deadline</label>
                         <input id="bet-deadline" name="deadline" type="datetime-local" required min="${minDeadlineValue}" value="${deadlineFieldValue}">
                     </div>
                     <div>
-                        <label for="bet-trash-talk">Trash Talk</label>
-                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one." value="${escapeHtml(trashTalk)}">
+                        <div class="label-row">
+                            <label for="bet-trash-talk">Trash talk</label>
+                            <span id="bet-trash-talk-count" class="char-count" aria-live="polite"></span>
+                        </div>
+                        <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional (example: Prove me wrong.)" value="${escapeHtml(trashTalk)}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
             `;
+            bindCharCounter("creator-name", "creator-name-count", FIELD_LIMITS.name);
+            bindCharCounter("bet-title", "bet-title-count", FIELD_LIMITS.claim);
+            bindCharCounter("bet-trash-talk", "bet-trash-talk-count", FIELD_LIMITS.trashTalk);
             document.getElementById("create-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
@@ -1556,12 +1731,15 @@
                     return;
                 }
                 trackBetsieEvent("betsie_form_submit", { form_id: "create_bet", has_trash_talk: form.get("trashTalk") ? "yes" : "no" });
+                const nextCreatorName = cleanFieldText(form.get("creatorName"), FIELD_LIMITS.name);
+                const nextClaim = cleanFieldText(form.get("title"), FIELD_LIMITS.claim);
+                const nextTrashTalk = cleanFieldText(form.get("trashTalk"), FIELD_LIMITS.trashTalk);
                 updateUrl("active", {
-                    cn: form.get("creatorName"),
-                    t: form.get("title"),
+                    cn: nextCreatorName,
+                    t: nextClaim,
                     p1: "For",
                     d: deadlineValue,
-                    tt: form.get("trashTalk"),
+                    tt: nextTrashTalk,
                     p2: "",
                     cs: "confirm",
                     inv: "",
@@ -1601,7 +1779,14 @@
                 shareUrl.searchParams.delete("cs");
                 shareUrl.searchParams.delete("inv");
                 shareUrl.searchParams.delete("hf");
-                return toCompressedHashUrl(shareUrl.toString());
+                const inviteUrl = new URL(toCompressedHashUrl(shareUrl.toString()));
+                inviteUrl.pathname = "/share/invite/";
+                return inviteUrl.toString();
+            })();
+            const reminderShareUrl = (() => {
+                const reminderUrl = new URL(challengeShareUrl);
+                reminderUrl.pathname = "/share/reminder/";
+                return reminderUrl.toString();
             })();
             const confirmationShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -1609,7 +1794,9 @@
                 shareUrl.searchParams.set("src", "accept");
                 shareUrl.searchParams.set("cr", "1");
                 shareUrl.searchParams.delete("hf");
-                return toCompressedHashUrl(shareUrl.toString());
+                const confirmUrl = new URL(toCompressedHashUrl(shareUrl.toString()));
+                confirmUrl.pathname = "/share/confirm/";
+                return confirmUrl.toString();
             })();
             const forceVotingPeriod = earlyVote === "1";
             const votingPeriod = forceVotingPeriod || (deadline && (new Date(deadline).getTime() <= Date.now()));
@@ -1619,8 +1806,8 @@
                 ? `Bet ended: ${parsedEarlyEndedAt.toLocaleString()}`
                 : `Bet ends: ${new Date(deadline).toLocaleString()}`;
             const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
-            const creatorVoteLabel = samePosition ? "Both Right!" : "Creator Won!";
-            const challengerVoteLabel = samePosition ? "Both Wrong!" : "Challenger Won!";
+            const creatorVoteLabel = samePosition ? "Both Right!" : `${escapedCreatorName} Won!`;
+            const challengerVoteLabel = samePosition ? "Both Wrong!" : `${escapedChallengerName} Won!`;
             const showCreatorWaitingForConfirmation =
                 isCreatorView && flowStep === "invite" && !hasChallengerSentConfirmation;
             app.innerHTML = `
@@ -1628,23 +1815,25 @@
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
                 <p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
-                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: -2px; margin-bottom: 10px; line-height: 1;"><button id="call-bet-early-link" type="button" style="border: 0; background: transparent; color: #dc2626; text-decoration: none; padding: 0; font: inherit; cursor: pointer;">Call the bet early.</button></p>' : ""}
+                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="call-bet-early-link" class="pill yes call-bet-early-pill" type="button">Call the bet early</button></p>' : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapedTitle}</div>
                         <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
-                        <button id="creator-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${creatorVoteLabel}</button>
                     </article>
                     <article class="competitor">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
                         <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
-                        <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${challengerVoteLabel}</button>
                     </article>
                 </section>
+                <div class="voting-actions${votingPeriod ? "" : " is-hidden"}">
+                    <button id="creator-won" class="winner-btn${samePosition ? " both-right" : ""}" type="button">${creatorVoteLabel}</button>
+                    <button id="challenger-won" class="winner-btn" type="button">${challengerVoteLabel}</button>
+                </div>
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && votingPeriod && !samePosition ? '<p class="subtitle" style="text-align: center;">If no one was right, <button id="no-contest-link" type="button" style="border: 0; background: transparent; color: inherit; text-decoration: underline; padding: 0; font: inherit; cursor: pointer;">click here</button>.</p>' : ""}
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
@@ -1687,8 +1876,9 @@
                         }
                         return "creator_invite_direct";
                     })();
+                    const shareTargetUrl = shareContext === "creator_reminder" ? reminderShareUrl : shareUrl;
                     trackBetsieEvent("betsie_share_intent", { share_context: shareContext });
-                    await shareCurrentLink(shareUrl, { share_context: shareContext });
+                    await shareCurrentLink(shareTargetUrl, { share_context: shareContext });
                     if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
                         updateUrl("active", { inv: "1", cs: "invite" });
                         return;
@@ -1802,9 +1992,10 @@
                 ? `Agree with ${escapeHtml(creatorName)}`
                 : "Agree with creator";
             const creatorDisplayName = creatorName.trim() || "Your friend";
-            const creatorSaysPrefix = creatorName.trim()
-                ? `${escapeHtml(creatorName)} says:`
-                : "Creator says:";
+            const creatorBetsLabel = creatorName.trim()
+                ? `${escapeHtml(creatorName)} bets that...`
+                : "Creator bets that...";
+            const creatorAvatar = avatarLetters(creatorName, "Creator");
             const startWithAgree = !acceptDraft || acceptDraft.agreeWithCreator;
             const draftChnValue = acceptDraft && acceptDraft.chn ? escapeHtml(acceptDraft.chn) : "";
             const draftCtValue = acceptDraft && acceptDraft.ct ? escapeHtml(acceptDraft.ct) : "";
@@ -1813,29 +2004,38 @@
                 : escapeHtml((acceptDraft && acceptDraft.position) || "");
             app.innerHTML = `
                 ${renderChallengerBreadcrumb("accept")}
-                <h1>Accept challenge</h1>
-                <p class="subtitle">Write your response to ${creatorPossessive} prediction. You can agree or make an alternate call.</p>
-                <div class="pill-row">
-                    <div class="pill yes">Creator prediction</div>
-                </div>
-                <p class="subtitle">${escapeHtml(creatorDisplayName)} bet that...<br><strong>${escapeHtml(title)}</strong></p>
+                <article class="competitor accept-creator-preview" aria-label="Creator prediction preview">
+                    <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
+                    <div class="competitor-label">${creatorBetsLabel}</div>
+                    <div class="competitor-position">${escapeHtml(title)}</div>
+                    <div class="competitor-quote">${trashTalk ? `"${escapeHtml(trashTalk)}"` : "\"No comment.\""}</div>
+                </article>
                 <form id="accept-form">
-                    ${trashTalk ? `<p class="subtitle">${creatorSaysPrefix} "${escapeHtml(trashTalk)}"</p>` : ""}
+                    <p class="subtitle accept-instruction">Write your response to ${creatorPossessive} prediction. You can agree or make your own prediction.</p>
                     <div>
-                        <label for="challenger-name">Your name</label>
-                        <input id="challenger-name" name="challengerName" type="text" maxlength="40" required placeholder="or what people call you" value="${draftChnValue}">
+                        <div class="label-row">
+                            <label for="challenger-name">Your name</label>
+                            <span id="challenger-name-count" class="char-count" aria-live="polite"></span>
+                        </div>
+                        <input id="challenger-name" name="challengerName" type="text" maxlength="${FIELD_LIMITS.name}" required placeholder="or what people call you" value="${draftChnValue}">
                     </div>
                     <div>
-                        <label>Your position</label>
+                        <div class="label-row">
+                            <label for="challenger-position">Your position</label>
+                            <span id="challenger-position-count" class="char-count" aria-live="polite"></span>
+                        </div>
                         <div class="choice-row" role="radiogroup" aria-label="Choose your position type">
                             <button id="agree-option" class="choice${startWithAgree ? " active" : ""}" type="button" aria-pressed="${startWithAgree}">${agreeWithCreatorLabel}</button>
                             <button id="custom-option" class="choice${startWithAgree ? "" : " active"}" type="button" aria-pressed="${!startWithAgree}">Use my own prediction</button>
                         </div>
-                        <input id="challenger-position" name="position" type="text" maxlength="100" required value="${positionFieldValue}" placeholder="your response prediction"${startWithAgree ? " disabled" : ""}>
+                        <input id="challenger-position" name="position" type="text" maxlength="${FIELD_LIMITS.claim}" required value="${positionFieldValue}" placeholder="your response prediction"${startWithAgree ? " disabled" : ""}>
                     </div>
                     <div>
-                        <label for="challenger-trash-talk">Trash Talk</label>
-                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="Optional, but highly encouraged" value="${draftCtValue}">
+                        <div class="label-row">
+                            <label for="challenger-trash-talk">Trash talk</label>
+                            <span id="challenger-trash-talk-count" class="char-count" aria-live="polite"></span>
+                        </div>
+                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="${FIELD_LIMITS.trashTalk}" placeholder="Optional comeback" value="${draftCtValue}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
@@ -1843,6 +2043,9 @@
             const agreeOption = document.getElementById("agree-option");
             const customOption = document.getElementById("custom-option");
             const challengerInput = document.getElementById("challenger-position");
+            bindCharCounter("challenger-name", "challenger-name-count", FIELD_LIMITS.name);
+            bindCharCounter("challenger-position", "challenger-position-count", FIELD_LIMITS.claim);
+            bindCharCounter("challenger-trash-talk", "challenger-trash-talk-count", FIELD_LIMITS.trashTalk);
 
             function setMode(isAgree) {
                 agreeOption.classList.toggle("active", isAgree);
@@ -1870,7 +2073,10 @@
             document.getElementById("accept-form").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
-                const position = String(form.get("position") || "").trim();
+                const nextChallengerName = cleanFieldText(form.get("challengerName"), FIELD_LIMITS.name);
+                const nextPosition = cleanFieldText(form.get("position"), FIELD_LIMITS.claim);
+                const nextChallengerTrashTalk = cleanFieldText(form.get("challengerTrashTalk"), FIELD_LIMITS.trashTalk);
+                const position = String(nextPosition || "").trim();
                 const agreeWithCreator = position === String(title).trim();
                 trackBetsieEvent("betsie_form_submit", {
                     form_id: "accept_bet",
@@ -1878,9 +2084,9 @@
                     has_trash_talk: form.get("challengerTrashTalk") ? "yes" : "no"
                 });
                 updateUrl("active", {
-                    chn: form.get("challengerName"),
-                    p2: form.get("position") || title,
-                    ct: form.get("challengerTrashTalk"),
+                    chn: nextChallengerName,
+                    p2: nextPosition || title,
+                    ct: nextChallengerTrashTalk,
                     src: "accept",
                     cr: "",
                     hf: "ch"
