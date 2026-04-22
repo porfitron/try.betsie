@@ -1389,7 +1389,7 @@
                         <input id="bet-deadline" name="deadline" type="datetime-local" required min="${minDeadlineValue}" value="${deadlineFieldValue}">
                     </div>
                     <div>
-                        <label for="bet-trash-talk">Trash talk (optional?)</label>
+                        <label for="bet-trash-talk">Trash Talk</label>
                         <input id="bet-trash-talk" name="trashTalk" type="text" maxlength="80" placeholder="You are about to lose this one." value="${escapeHtml(trashTalk)}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
@@ -1452,6 +1452,14 @@
                 shareUrl.searchParams.delete("hf");
                 return shareUrl.toString();
             })();
+            const confirmationShareUrl = (() => {
+                const shareUrl = new URL(window.location.href);
+                shareUrl.searchParams.set("mode", "active");
+                shareUrl.searchParams.set("src", "accept");
+                shareUrl.searchParams.set("cr", "1");
+                shareUrl.searchParams.delete("hf");
+                return shareUrl.toString();
+            })();
             const votingPeriod = deadline && (new Date(deadline).getTime() <= Date.now());
             const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const creatorVoteLabel = samePosition ? "Both Right!" : "Creator Won!";
@@ -1462,6 +1470,7 @@
                 ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
+                <p class="subtitle" style="text-align: center; margin-top: 0;">Bet ends: ${new Date(deadline).toLocaleString()}</p>
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
@@ -1478,10 +1487,10 @@
                         <button id="challenger-won" class="winner-btn${votingPeriod ? "" : " is-hidden"}" type="button">${challengerVoteLabel}</button>
                     </article>
                 </section>
-                <p class="subtitle">Deadline: ${new Date(deadline).toLocaleString()}</p>
+                ${acceptedFromChallenger && hasChallengerSentConfirmation && votingPeriod && !samePosition ? '<p class="subtitle" style="text-align: center;">If no one was right, <button id="no-contest-link" type="button" style="border: 0; background: transparent; color: inherit; text-decoration: underline; padding: 0; font: inherit; cursor: pointer;">click here</button>.</p>' : ""}
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
-                ${acceptedFromChallenger && hasChallengerSentConfirmation ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
+                ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
@@ -1496,7 +1505,9 @@
             }
             if (document.getElementById("share-link")) {
                 document.getElementById("share-link").addEventListener("click", async () => {
-                    const shareUrl = hasChallengerAccepted ? window.location.href : challengeShareUrl;
+                    const shareUrl = hasChallengerAccepted
+                        ? (acceptedFromChallenger ? confirmationShareUrl : window.location.href)
+                        : challengeShareUrl;
                     const showCreatorHandoff = isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger;
                     const showChallengerHandoff = acceptedFromChallenger && !hasChallengerSentConfirmation;
                     if (showCreatorHandoff) {
@@ -1549,6 +1560,13 @@
                 trackBetsieEvent("betsie_vote", { choice: "challenger", phase: "after_deadline" });
                 updateUrl("settle", { w: "2" });
             });
+            const noContestLink = document.getElementById("no-contest-link");
+            if (noContestLink) {
+                noContestLink.addEventListener("click", () => {
+                    trackBetsieEvent("betsie_vote", { choice: "no_contest", phase: "after_deadline" });
+                    updateUrl("settle", { w: "0" });
+                });
+            }
             if (isCreatorView) {
                 bindCreatorBreadcrumb();
             } else {
@@ -1651,8 +1669,8 @@
                         <input id="challenger-position" name="position" type="text" maxlength="100" required value="${positionFieldValue}" placeholder="your response prediction"${startWithAgree ? " disabled" : ""}>
                     </div>
                     <div>
-                        <label for="challenger-trash-talk">Trash talk (optional?)</label>
-                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="You are going down." value="${draftCtValue}">
+                        <label for="challenger-trash-talk">Trash Talk</label>
+                        <input id="challenger-trash-talk" name="challengerTrashTalk" type="text" maxlength="80" placeholder="Optional, but highly encouraged" value="${draftCtValue}">
                     </div>
                     <button class="cta" type="submit">Lock in bet</button>
                 </form>
@@ -1712,6 +1730,7 @@
             const name = winner === "1" ? creatorDisplayName : winner === "2" ? challengerDisplayName : "";
             const samePosition = Boolean(p2) && String(p2).trim() === String(title).trim();
             const betDateLabel = deadline ? new Date(deadline).toLocaleDateString() : "";
+            const noContest = winner === "0";
             const bothWin = samePosition && winner === "1";
             const bothLose = samePosition && winner === "2";
             const creatorIsWinner = bothWin || winner === "1";
@@ -1723,6 +1742,9 @@
             const creatorLoserClass = creatorIsLoser ? " is-loser" : "";
             const challengerLoserClass = challengerIsLoser ? " is-loser" : "";
             const settleHeadline = (() => {
+                if (noContest) {
+                    return "No Contest!";
+                }
                 if (samePosition && winner === "1") {
                     return "Both win this round";
                 }
