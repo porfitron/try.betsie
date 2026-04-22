@@ -942,7 +942,7 @@
         const url = new URL(window.location.href);
         const HASH_STATE_VERSION = 1;
         const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf", "ev", "ee"];
-        const SEARCH_FALLBACK_KEYS = ["mode", "t", "d", "cn", "chn", "p1", "p2", "tt", "ct", "src", "cr", "ev", "ee"];
+        const SEARCH_FALLBACK_KEYS = ["mode", "t", "d", "cn", "chn", "p1", "p2", "tt", "ct", "w", "src", "cr", "ev", "ee"];
         const FIELD_LIMITS = {
             name: 20,
             claim: 70,
@@ -2217,17 +2217,22 @@
         }
 
         const hasBetData = Boolean(title && deadline);
+        const invalidSettleState = mode === "settle" && hasBetData && !winner;
+        if (invalidSettleState) {
+            updateUrl("active");
+        }
+        const effectiveMode = invalidSettleState ? "active" : mode;
         const surface = (() => {
-            if (!mode && !hasBetData) {
+            if (!effectiveMode && !hasBetData) {
                 return "landing";
             }
-            if (mode === "create") {
+            if (effectiveMode === "create") {
                 return "create";
             }
-            if (mode === "accept" && hasBetData) {
+            if (effectiveMode === "accept" && hasBetData) {
                 return "accept";
             }
-            if (mode === "settle" && hasBetData) {
+            if (effectiveMode === "settle" && hasBetData) {
                 return "settle";
             }
             if (hasBetData) {
@@ -2237,18 +2242,18 @@
         })();
         trackBetsieEvent("betsie_surface_view", {
             surface,
-            url_mode: mode || "",
+            url_mode: effectiveMode || "",
             invited_flag: invited || "",
             challenger_responded: challengerResponded || "",
             has_winner: winner ? "yes" : "no"
         });
-        if (!mode && !hasBetData) {
+        if (!effectiveMode && !hasBetData) {
             renderLanding();
-        } else if (mode === "create") {
+        } else if (effectiveMode === "create") {
             renderCreate();
-        } else if (mode === "accept" && hasBetData) {
+        } else if (effectiveMode === "accept" && hasBetData) {
             renderAccept();
-        } else if (mode === "settle" && hasBetData) {
+        } else if (effectiveMode === "settle" && hasBetData) {
             renderSettle();
         } else if (hasBetData) {
             renderActive();
