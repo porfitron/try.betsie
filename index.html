@@ -1124,18 +1124,18 @@
                 return "Still waiting on your response.\nCall my bluff.";
             }
             if (shareContext.startsWith("creator_")) {
-                return `${claim}\n${creatorHook}`;
+                return `The bet: ${claim}\nComment: ${creatorHook}`;
             }
             if (shareContext.startsWith("challenger_")) {
                 const lineOne = challengerPosition ? `I'm taking: ${challengerPosition}` : "I accepted your challenge.";
-                const lineTwo = challengerHook || "Game on.";
+                const lineTwo = `Comment: ${challengerHook || "No comment."}`;
                 return `${lineOne}\n${lineTwo}`;
             }
             if (shareContext === "settle_result") {
                 const samePosition = Boolean(challengerPosition) && challengerPosition === claim;
                 const lines = [];
                 if (winner === "0") {
-                    lines.push("Result: no contest.");
+                    lines.push("Result: No Contest.");
                 } else if (samePosition && winner === "1") {
                     lines.push("Result: both were right.");
                 } else if (samePosition && winner === "2") {
@@ -1159,12 +1159,10 @@
                         lines.push(`${challengerLabel}: ${challengerPosition}`);
                     }
                 }
-                if (samePosition && winner === "1") {
-                    lines.push("Mutual W.");
-                } else if (samePosition && winner === "2") {
+                if (samePosition && winner === "2") {
                     lines.push("Nobody called it this time.");
                 } else if (winner === "0") {
-                    lines.push("No winner on this one.");
+                    lines.push("Something else happened.");
                 }
                 return lines.join("\n");
             }
@@ -1770,6 +1768,7 @@
             const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
             const challengerButtonText = hasChallengerSentConfirmation ? "Re-share confirmation link" : "Send confirmation link";
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
+            const challengerAgreesWithCreator = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
                 shareUrl.searchParams.set("mode", "accept");
@@ -1795,7 +1794,7 @@
                 shareUrl.searchParams.set("cr", "1");
                 shareUrl.searchParams.delete("hf");
                 const confirmUrl = new URL(toCompressedHashUrl(shareUrl.toString()));
-                confirmUrl.pathname = "/share/confirm/";
+                confirmUrl.pathname = challengerAgreesWithCreator ? "/share/confirm-agree/" : "/share/confirm/";
                 return confirmUrl.toString();
             })();
             const forceVotingPeriod = earlyVote === "1";
@@ -1805,7 +1804,7 @@
             const betTimingLabel = forceVotingPeriod && hasEarlyEndedTimestamp
                 ? `Bet ended: ${parsedEarlyEndedAt.toLocaleString()}`
                 : `Bet ends: ${new Date(deadline).toLocaleString()}`;
-            const samePosition = hasChallengerAccepted && String(p2).trim() === String(title).trim();
+            const samePosition = challengerAgreesWithCreator;
             const creatorVoteLabel = samePosition ? "Both Right!" : `${escapedCreatorName} Won!`;
             const challengerVoteLabel = samePosition ? "Both Wrong!" : `${escapedChallengerName} Won!`;
             const showCreatorWaitingForConfirmation =
@@ -1871,8 +1870,11 @@
                         if (!isCreatorView) {
                             return hasChallengerSentConfirmation ? "challenger_resend_confirm" : "challenger_send_confirm";
                         }
+                        if (!hasChallengerAccepted && hasInvitedChallenger) {
+                            return "creator_reminder";
+                        }
                         if (hasChallengerAccepted) {
-                            return hasInvitedChallenger ? "creator_reminder" : "creator_post_accept";
+                            return "creator_post_accept";
                         }
                         return "creator_invite_direct";
                     })();
@@ -2133,6 +2135,21 @@
             const challengerAvatar = avatarLetters(challengerName, "Challenger");
             const escapedCreatorTrashTalk = escapeHtml(trashTalk);
             const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
+            const settleShareUrl = (() => {
+                const resultUrl = new URL(toCompressedHashUrl(window.location.href));
+                if (winner === "0") {
+                    resultUrl.pathname = "/share/result-no-contest/";
+                } else if (samePosition && winner === "1") {
+                    resultUrl.pathname = "/share/result-both-right/";
+                } else if (samePosition && winner === "2") {
+                    resultUrl.pathname = "/share/result-both-wrong/";
+                } else if (winner === "1") {
+                    resultUrl.pathname = "/share/result-creator-won/";
+                } else if (winner === "2") {
+                    resultUrl.pathname = "/share/result-challenger-won/";
+                }
+                return resultUrl.toString();
+            })();
             app.innerHTML = `
                 <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Bet Receipt</span></div>
                 <p class="subtitle" style="text-align: center; margin-bottom: 6px;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
@@ -2175,7 +2192,7 @@
             }
             document.getElementById("share-result").addEventListener("click", () => {
                 trackBetsieEvent("betsie_share_intent", { share_context: "settle_result" });
-                void shareCurrentLink(window.location.href, { share_context: "settle_result" });
+                void shareCurrentLink(settleShareUrl, { share_context: "settle_result" });
             });
             document.getElementById("new-bet").addEventListener("click", () => {
                 trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
