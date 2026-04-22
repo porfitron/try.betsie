@@ -368,6 +368,39 @@
             text-align: center;
         }
 
+        .competitor.is-winner {
+            border-color: rgba(16, 185, 129, 0.9);
+            box-shadow:
+                0 0 0 2px rgba(16, 185, 129, 0.34),
+                0 0 18px rgba(16, 185, 129, 0.48),
+                0 10px 24px rgba(16, 185, 129, 0.2);
+            animation: winnerPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes winnerPulse {
+            0% {
+                box-shadow:
+                    0 0 0 2px rgba(16, 185, 129, 0.32),
+                    0 0 14px rgba(16, 185, 129, 0.38),
+                    0 8px 20px rgba(16, 185, 129, 0.16);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 4px rgba(16, 185, 129, 0.48),
+                    0 0 28px rgba(16, 185, 129, 0.62),
+                    0 14px 30px rgba(16, 185, 129, 0.28);
+                transform: scale(1.01);
+            }
+            100% {
+                box-shadow:
+                    0 0 0 2px rgba(16, 185, 129, 0.32),
+                    0 0 14px rgba(16, 185, 129, 0.38),
+                    0 8px 20px rgba(16, 185, 129, 0.16);
+                transform: scale(1);
+            }
+        }
+
         .avatar {
             width: 46px;
             height: 46px;
@@ -607,6 +640,53 @@
             word-break: break-word;
         }
 
+        .celebration-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgba(17, 24, 39, 0.78);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+
+        .celebration-card {
+            width: min(420px, 100%);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: #111827;
+            color: #F9FAFB;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .celebration-gif {
+            width: 100%;
+            max-height: 220px;
+            object-fit: cover;
+            display: block;
+            background: #0F172A;
+        }
+
+        .celebration-content {
+            padding: 16px 16px 14px;
+        }
+
+        .celebration-title {
+            margin: 0;
+            font-size: 1.12rem;
+            letter-spacing: -0.01em;
+        }
+
+        .celebration-text {
+            margin: 8px 0 12px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            color: #D1D5DB;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -672,12 +752,27 @@
             </div>
         </div>
     </div>
+    <div id="celebration-modal" class="celebration-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
+        <div class="celebration-card">
+            <img
+                class="celebration-gif"
+                src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif"
+                alt="Confetti celebration animation">
+            <div class="celebration-content">
+                <h2 id="celebration-title" class="celebration-title">Result locked in</h2>
+                <p class="celebration-text">Big moment. Reviewing the final results now...</p>
+                <button id="celebration-close" class="cta" type="button">See final results</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const app = document.getElementById("app");
         const calendarModal = document.getElementById("calendar-modal");
         const freshModal = document.getElementById("fresh-modal");
         const shareHandoffModal = document.getElementById("share-handoff-modal");
+        const celebrationModal = document.getElementById("celebration-modal");
+        let celebrationTimer = null;
         const shareHandoffState = { role: null, url: "" };
         const url = new URL(window.location.href);
         const params = url.searchParams;
@@ -826,6 +921,25 @@
 
         function closeFreshModal() {
             freshModal.classList.add("is-hidden");
+        }
+
+        function closeCelebrationModal() {
+            celebrationModal.classList.add("is-hidden");
+            if (celebrationTimer) {
+                clearTimeout(celebrationTimer);
+                celebrationTimer = null;
+            }
+        }
+
+        function openCelebrationModal() {
+            celebrationModal.classList.remove("is-hidden");
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (celebrationTimer) {
+                clearTimeout(celebrationTimer);
+            }
+            celebrationTimer = setTimeout(() => {
+                closeCelebrationModal();
+            }, reduceMotion ? 900 : 2400);
         }
 
         function urlWithoutHandoffFlash(urlString) {
@@ -1026,6 +1140,16 @@
                 closeFreshModal();
             }
         });
+        document.getElementById("celebration-close").addEventListener("click", () => {
+            trackBetsieEvent("betsie_settle_celebration", { action: "manual_close" });
+            closeCelebrationModal();
+        });
+        celebrationModal.addEventListener("click", (event) => {
+            if (event.target === celebrationModal) {
+                trackBetsieEvent("betsie_settle_celebration", { action: "backdrop_close" });
+                closeCelebrationModal();
+            }
+        });
         document.getElementById("share-handoff-primary").addEventListener("click", async () => {
             if (!shareHandoffState.url) {
                 return;
@@ -1085,6 +1209,9 @@
             }
             if (event.key === "Escape" && !shareHandoffModal.classList.contains("is-hidden")) {
                 closeShareHandoffModal();
+            }
+            if (event.key === "Escape" && !celebrationModal.classList.contains("is-hidden")) {
+                closeCelebrationModal();
             }
         });
 
@@ -1502,6 +1629,11 @@
             const challengerDisplayName = challengerName.trim() || "Challenger";
             const name = winner === "1" ? creatorDisplayName : winner === "2" ? challengerDisplayName : "";
             const samePosition = Boolean(p2) && String(p2).trim() === String(title).trim();
+            const betDateLabel = deadline ? new Date(deadline).toLocaleDateString() : "";
+            const creatorIsWinner = winner === "1";
+            const challengerIsWinner = winner === "2";
+            const creatorWinnerClass = creatorIsWinner ? " is-winner" : "";
+            const challengerWinnerClass = challengerIsWinner ? " is-winner" : "";
             const settleHeadline = (() => {
                 if (samePosition && winner === "1") {
                     return "Both win this round";
@@ -1521,17 +1653,18 @@
             const escapedCreatorTrashTalk = escapeHtml(trashTalk);
             const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             app.innerHTML = `
-                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Settlement</span></div>
-                <p class="subtitle" style="text-align: center;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Bet Receipt</span></div>
+                <p class="subtitle" style="text-align: center; margin-bottom: 6px;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
                 <h1>${settleHeadline}</h1>
                 <section class="matchup" aria-label="Final head to head">
-                    <article class="competitor">
+                    <article class="competitor${creatorWinnerClass}">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapeHtml(title || "-")}</div>
                         <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
-                    <article class="competitor">
+                    <article class="competitor${challengerWinnerClass}">
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
@@ -1567,6 +1700,12 @@
                 trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
                 window.location.href = window.location.pathname;
             });
+            if (winner) {
+                trackBetsieEvent("betsie_settle_celebration", { action: "auto_open" });
+                requestAnimationFrame(() => {
+                    openCelebrationModal();
+                });
+            }
         }
 
         const hasBetData = Boolean(title && deadline);
