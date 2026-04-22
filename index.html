@@ -369,6 +369,14 @@
             transform: scale(0.98);
         }
 
+        .cta:disabled,
+        .ghost:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .cta:focus-visible,
         .ghost:focus-visible,
         input:focus-visible,
@@ -1038,6 +1046,7 @@
             }
             return merged;
         })();
+        const isConfirmationSharePath = /^\/share\/confirm(?:-agree)?\/?$/i.test(url.pathname);
         const mode = params.get("mode");
         const title = clampText(params.get("t") || "", FIELD_LIMITS.claim);
         const creatorName = clampText(params.get("cn") || "", FIELD_LIMITS.name);
@@ -1048,10 +1057,10 @@
         const trashTalk = clampText(params.get("tt") || "", FIELD_LIMITS.trashTalk);
         const challengerTrashTalk = clampText(params.get("ct") || "", FIELD_LIMITS.trashTalk);
         const winner = params.get("w") || "";
-        const source = params.get("src") || "";
+        const source = params.get("src") || (isConfirmationSharePath ? "accept" : "");
         const creatorStep = params.get("cs") || "";
         const invited = params.get("inv") || "";
-        const challengerResponded = params.get("cr") || "";
+        const challengerResponded = params.get("cr") || (isConfirmationSharePath ? "1" : "");
         const handoffFlash = params.get("hf") || "";
         const earlyVote = params.get("ev") || "";
         const earlyEndedAt = params.get("ee") || "";
@@ -1768,6 +1777,7 @@
             const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
             const challengerButtonText = hasChallengerSentConfirmation ? "Re-share confirmation link" : "Send confirmation link";
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
+            const disableChallengerReshare = acceptedFromChallenger && hasChallengerSentConfirmation;
             const challengerAgreesWithCreator = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -1837,7 +1847,7 @@
                 <p class="subtitle"><strong>Who can see this?</strong><br>Anyone with a link</p>
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
-                <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
+                <button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button"${disableChallengerReshare ? " disabled aria-disabled=\"true\"" : ""}>${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<button id="accept-preview" class="ghost" type="button">Preview challenger link</button>'}
                 ${hasChallengerAccepted ? `<button id="add-calendar" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Add to calendar</button>` : ""}
@@ -1943,7 +1953,7 @@
                             openShareHandoffModal("creator", challengeShareUrl, creatorName, challengerName);
                         } else if (shouldAutoChallengerHandoff) {
                             trackBetsieEvent("betsie_share_handoff", { action: "auto_open", role: "challenger" });
-                            openShareHandoffModal("challenger", toCompressedHashUrl(window.location.href), creatorName, challengerName);
+                            openShareHandoffModal("challenger", confirmationShareUrl, creatorName, challengerName);
                         }
                     });
                 } else {
