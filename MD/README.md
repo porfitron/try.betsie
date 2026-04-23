@@ -8,6 +8,10 @@ Betsie Lite is a lightweight, backend-less head unit for the messaging app peopl
 - **PWA First:** Built with vanilla HTML, CSS, and JS, installable to the home screen with offline-ready properties.
 - **Share Loop:** Optimize the "Compose -> Share -> Challenge -> Settle" loop inside existing message threads.
 
+## Docs
+
+- **[MEASUREMENT.md](MEASUREMENT.md)** — GA4 events, milestone definitions, and how to build segments and funnels in Google Analytics 4.
+
 ## Tech Stack
 - HTML5 / CSS3 (Modern Flexbox/Grid)
 - Vanilla JavaScript (ES6+)
