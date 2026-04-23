@@ -1675,16 +1675,6 @@
             }
         }
 
-        function shareViaWhatsApp(shareUrl = window.location.href, analytics = {}) {
-            const normalizedShareUrl = toCompressedHashUrl(shareUrl);
-            const shareContext = analytics.share_context || "general";
-            const shareText = composeShareText(shareContext);
-            const waMessage = `${shareText}\n${normalizedShareUrl}`;
-            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waMessage)}`;
-            trackBetsieEvent("betsie_share", { share_method: "whatsapp_deeplink", ...analytics });
-            window.location.href = waUrl;
-        }
-
         document.getElementById("calendar-google").addEventListener("click", () => {
             trackBetsieEvent("betsie_calendar_export", { calendar_provider: "google_calendar" });
             openGoogleCalendar();
@@ -2060,7 +2050,7 @@
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 ${!acceptedFromChallenger || !hasChallengerSentConfirmation
-                    ? `<button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button><button id="share-whatsapp" class="ghost${votingPeriod ? " is-hidden" : ""}" type="button">Share on WhatsApp</button>`
+                    ? `<button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>`
                     : ""}
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<p class="preview-accept-wrap"><a id="accept-preview" class="preview-accept-link" href="#">Preview what they\'ll see</a></p>'}
@@ -2117,51 +2107,6 @@
                     const shareTargetUrl = shareContext === "creator_reminder" ? reminderShareUrl : shareUrl;
                     trackBetsieEvent("betsie_share_intent", { share_context: shareContext });
                     await shareCurrentLink(shareTargetUrl, { share_context: shareContext });
-                    if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
-                        updateUrl("active", { inv: "1", cs: "invite" });
-                        return;
-                    }
-                    if (!isCreatorView && !hasChallengerSentConfirmation) {
-                        updateUrl("active", { src: "accept", cr: "1" });
-                    }
-                });
-            }
-            if (document.getElementById("share-whatsapp")) {
-                document.getElementById("share-whatsapp").addEventListener("click", async (e) => {
-                    e.preventDefault();
-                    const shareUrl = hasChallengerAccepted
-                        ? (acceptedFromChallenger ? confirmationShareUrl : window.location.href)
-                        : challengeShareUrl;
-                    const showCreatorHandoff = isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger;
-                    const showChallengerHandoff = acceptedFromChallenger && !hasChallengerSentConfirmation;
-                    if (showCreatorHandoff) {
-                        trackBetsieEvent("betsie_share_flow", { flow: "creator_handoff_modal" });
-                        openShareHandoffModal("creator", shareUrl, creatorName, challengerName);
-                        return;
-                    }
-                    if (showChallengerHandoff) {
-                        trackBetsieEvent("betsie_share_flow", { flow: "challenger_handoff_modal" });
-                        openShareHandoffModal("challenger", shareUrl, creatorName, challengerName);
-                        return;
-                    }
-                    const shareContext = (() => {
-                        if (!isCreatorView) {
-                            return hasChallengerSentConfirmation ? "challenger_resend_confirm" : "challenger_send_confirm";
-                        }
-                        if (!hasChallengerAccepted && hasInvitedChallenger) {
-                            return "creator_reminder";
-                        }
-                        if (hasChallengerAccepted) {
-                            return "creator_post_accept";
-                        }
-                        return "creator_invite_direct";
-                    })();
-                    const shareTargetUrl = shareContext === "creator_reminder" ? reminderShareUrl : shareUrl;
-                    trackBetsieEvent("betsie_share_intent", { share_context: `${shareContext}_whatsapp` });
-                    await shareViaWhatsApp(shareTargetUrl, {
-                        share_context: shareContext,
-                        share_channel: "whatsapp"
-                    });
                     if (isCreatorView && !hasChallengerAccepted && !hasInvitedChallenger) {
                         updateUrl("active", { inv: "1", cs: "invite" });
                         return;
@@ -2449,7 +2394,6 @@
                 </section>
                 ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
                 <button id="share-result" class="cta" type="button">Share result</button>
-                <button id="share-result-whatsapp" class="ghost" type="button">Share result on WhatsApp</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
@@ -2472,13 +2416,6 @@
             document.getElementById("share-result").addEventListener("click", () => {
                 trackBetsieEvent("betsie_share_intent", { share_context: "settle_result" });
                 void shareCurrentLink(settleShareUrl, { share_context: "settle_result" });
-            });
-            document.getElementById("share-result-whatsapp").addEventListener("click", () => {
-                trackBetsieEvent("betsie_share_intent", { share_context: "settle_result_whatsapp" });
-                void shareViaWhatsApp(settleShareUrl, {
-                    share_context: "settle_result",
-                    share_channel: "whatsapp"
-                });
             });
             document.getElementById("new-bet").addEventListener("click", () => {
                 trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
