@@ -1675,23 +1675,14 @@
             }
         }
 
-        async function shareViaWhatsApp(shareUrl = window.location.href, analytics = {}) {
+        function shareViaWhatsApp(shareUrl = window.location.href, analytics = {}) {
             const normalizedShareUrl = toCompressedHashUrl(shareUrl);
             const shareContext = analytics.share_context || "general";
             const shareText = composeShareText(shareContext);
             const waMessage = `${shareText}\n${normalizedShareUrl}`;
-            const waUrl = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
-            const popup = window.open(waUrl, "_blank", "noopener,noreferrer");
-            if (popup) {
-                popup.opener = null;
-                trackBetsieEvent("betsie_share", { share_method: "whatsapp_deeplink", ...analytics });
-                return;
-            }
-            if (navigator.clipboard) {
-                await navigator.clipboard.writeText(waMessage);
-                trackBetsieEvent("betsie_share", { share_method: "clipboard", ...analytics });
-                alert("Could not open WhatsApp automatically. Message copied instead.");
-            }
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waMessage)}`;
+            trackBetsieEvent("betsie_share", { share_method: "whatsapp_deeplink", ...analytics });
+            window.location.href = waUrl;
         }
 
         document.getElementById("calendar-google").addEventListener("click", () => {
