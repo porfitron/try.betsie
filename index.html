@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Betsie Lite | Bets with Besties</title>
+    <title>Betsie Quick Bet | Bets with your Besties</title>
     <meta name="description" content="Betsie Lite lets you create and share a friendly 1-on-1 bet in seconds.">
     <meta name="keywords" content="betsie, betsie lite, social betting, friendly bets, 1-on-1 bets, prediction challenge, shareable bets, wager app, no account betting, mobile bet app">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
     <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
     <link rel="canonical" href="https://try.bestie.app/">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Betsie Lite">
-    <meta property="og:title" content="Betsie Lite | Bets with Besties">
+    <meta property="og:site_name" content="Betsie Quick Bet">
+    <meta property="og:title" content="Betsie Quick Bet | Bets with your Besties">
     <meta property="og:description" content="Create and share a friendly 1-on-1 bet in under a minute. No account needed.">
     <meta property="og:url" content="https://try.bestie.app/">
     <meta property="og:image" content="https://try.bestie.app/assets/og/betsie-lite-og.png">
@@ -22,7 +22,7 @@
     <meta property="og:image:alt" content="Betsie Lite social preview with app branding and tagline.">
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Betsie Lite | Bets with Besties">
+    <meta name="twitter:title" content="Betsie Quick Bet | Bets with your Besties">
     <meta name="twitter:description" content="Create and share a friendly 1-on-1 bet in under a minute. No account needed.">
     <meta name="twitter:image" content="https://try.bestie.app/assets/og/betsie-lite-og.png">
     <meta name="twitter:image:alt" content="Betsie Lite social preview with app branding and tagline.">
@@ -448,6 +448,36 @@
         select:focus-visible {
             outline: 3px solid rgba(243, 109, 111, 0.35);
             outline-offset: 2px;
+        }
+
+        .share-action-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .share-action-icon {
+            width: 1.05em;
+            height: 1.05em;
+            display: inline-block;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
+
+        .share-action-icon path,
+        .share-action-icon rect,
+        .calendar-action-icon path,
+        .calendar-action-icon rect {
+            stroke: currentColor;
+        }
+
+        .calendar-action-icon {
+            width: 1.05em;
+            height: 1.05em;
+            display: inline-block;
+            flex-shrink: 0;
+            vertical-align: middle;
         }
 
         form {
@@ -1083,7 +1113,7 @@
             <div id="share-handoff-summary" class="modal-summary" hidden></div>
             <div class="modal-actions">
                 <button id="share-handoff-primary" class="cta" type="button"></button>
-                <button id="share-handoff-copy" class="ghost share-handoff-copy-hidden" type="button" tabindex="-1" aria-hidden="true">Copy message</button>
+                <button id="share-handoff-copy" class="ghost share-handoff-copy-hidden" type="button" tabindex="-1" aria-hidden="true"><span class="share-action-label"><svg class="share-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V14M12 3L8.5 6.5M12 3L15.5 6.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="5" y="11" width="14" height="10" rx="2" ry="2" stroke-width="2"/></svg><span>Copy message</span></span></button>
             </div>
             <p id="share-handoff-hint" class="modal-hint" aria-live="polite"></p>
         </div>
@@ -1275,6 +1305,16 @@
                 .replaceAll("<", "&lt;")
                 .replaceAll(">", "&gt;")
                 .replaceAll('"', "&quot;");
+        }
+
+        function shareActionLabel(label) {
+            const safeLabel = escapeHtml(String(label || ""));
+            return `<span class="share-action-label"><svg class="share-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V14M12 3L8.5 6.5M12 3L15.5 6.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="5" y="11" width="14" height="10" rx="2" ry="2" stroke-width="2"/></svg><span>${safeLabel}</span></span>`;
+        }
+
+        function calendarActionLabel(label) {
+            const safeLabel = escapeHtml(String(label || ""));
+            return `<span class="share-action-label"><svg class="calendar-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="5" width="16" height="15" rx="2" ry="2" stroke-width="2"/><path d="M8 3V7M16 3V7M4 10H20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${safeLabel}</span></span>`;
         }
 
         function avatarLetters(name, fallback = "") {
@@ -1571,14 +1611,14 @@
                 bodyEl.textContent = "Make sure everything looks good before you share with a friend.";
                 hintEl.textContent =
                     "Next: your device opens a share sheet or picker. Choose Messages, WhatsApp, or another chat where you already talk, then send the link.";
-                primaryEl.textContent = "Confirm and send";
+                primaryEl.innerHTML = shareActionLabel("Confirm and send");
             } else {
                 titleEl.textContent = "Confirm your position";
                 titleEl.className = "modal-title modal-title--share-handoff-confirm";
                 bodyEl.textContent = "Make sure everything looks good before you lock in.";
                 hintEl.textContent =
                     "Next: your device opens a share sheet or picker. Choose Messages, WhatsApp, or another chat where you already talk, then send the link.";
-                primaryEl.textContent = "Confirm and send";
+                primaryEl.innerHTML = shareActionLabel("Confirm and send");
             }
             shareHandoffModal.classList.remove("is-hidden");
             primaryEl.focus();
@@ -1974,10 +2014,12 @@
             const hasInvitedChallenger = invited === "1";
             const flowStep = hasChallengerAccepted || hasInvitedChallenger ? "invite" : "confirm";
             const inviteButtonText = hasInvitedChallenger ? "Send a reminder" : "Invite challenger";
+            const inviteButtonLabel = shareActionLabel(inviteButtonText);
             const inviteButtonClass = "cta";
             const hasChallengerSentConfirmation = challengerResponded === "1";
             const challengerFlowStep = hasChallengerSentConfirmation ? "respond" : "confirm";
-            const challengerButtonText = hasChallengerSentConfirmation ? "Re-share confirmation link" : "Send confirmation link";
+            const challengerButtonText = hasChallengerSentConfirmation ? "Re-share the link to this bet" : "Confirm and send";
+            const challengerButtonLabel = shareActionLabel(challengerButtonText);
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
             const disableChallengerReshare = acceptedFromChallenger && hasChallengerSentConfirmation;
             const challengerAgreesWithCreator = hasChallengerAccepted && String(p2).trim() === String(title).trim();
@@ -2026,7 +2068,7 @@
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
                 <p class="subtitle bet-timing-line" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
-                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="add-calendar-pill" class="pill add-calendar-pill" type="button">Add to calendar</button></p>' : ""}
+                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? `<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="add-calendar-pill" class="pill add-calendar-pill" type="button">${calendarActionLabel("Add to calendar")}</button></p>` : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
@@ -2038,7 +2080,7 @@
                         <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${challengerPosition}</div>
-                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "&nbsp;"}</div>
+                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
                 </section>
                 <div class="voting-actions${votingPeriod ? "" : " is-hidden"}">
@@ -2050,7 +2092,7 @@
                 ${showCreatorWaitingForConfirmation ? '<p class="subtitle"><strong>Status:</strong> Waiting for your friend to send you back their confirmation link.</p>' : ""}
                 ${acceptedFromChallenger && hasChallengerSentConfirmation && !votingPeriod ? '<p class="subtitle"><strong>Next step:</strong> Check back for the countdown and then you\'ll be able to vote.</p>' : ""}
                 ${!acceptedFromChallenger || !hasChallengerSentConfirmation
-                    ? `<button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonText : inviteButtonText}</button>`
+                    ? `<button id="share-link" class="${acceptedFromChallenger ? challengerButtonClass : inviteButtonClass}${votingPeriod ? " is-hidden" : ""}" type="button">${acceptedFromChallenger ? challengerButtonLabel : inviteButtonLabel}</button>`
                     : ""}
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<p class="preview-accept-wrap"><a id="accept-preview" class="preview-accept-link" href="#">Preview what they\'ll see</a></p>'}
@@ -2058,8 +2100,8 @@
                     ? `<button id="call-bet-early-cta" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Call the bet early</button>${
                     acceptedFromChallenger && hasChallengerSentConfirmation
                         ? disableChallengerReshare
-                            ? `<p class="reshare-confirm-wrap"><span class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link" aria-disabled="true" tabindex="-1">Re-share confirmation link</span></p>`
-                            : `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">Re-share confirmation link</button></p>`
+                            ? `<p class="reshare-confirm-wrap"><span class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link" aria-disabled="true" tabindex="-1">${shareActionLabel("Re-share the link to this bet")}</span></p>`
+                            : `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">${shareActionLabel("Re-share the link to this bet")}</button></p>`
                         : ""
                 }`
                     : ""}
@@ -2393,7 +2435,7 @@
                     </article>
                 </section>
                 ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
-                <button id="share-result" class="cta" type="button">Share result</button>
+                <button id="share-result" class="cta" type="button">${shareActionLabel("Share result")}</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
