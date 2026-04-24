@@ -1315,7 +1315,7 @@
         const sampleDeadline = new Date(Date.now() + 26 * 3600000).toISOString();
         const sampleState = shouldUseSampleGameOn
             ? {
-                t: "The Suns make the playoffs",
+                t: "This is a sample bet",
                 cn: "Maya",
                 chn: "Jules",
                 p1: "For",
@@ -2082,6 +2082,7 @@
         }
 
         function renderActive() {
+            const isSamplePreview = shouldUseSampleGameOn;
             const escapedTitle = escapeHtml(title);
             const escapedCreatorName = escapeHtml(creatorName || "Creator");
             const escapedChallengerName = escapeHtml(challengerName || "Challenger");
@@ -2105,6 +2106,7 @@
             const challengerButtonLabel = shareActionLabel(challengerButtonText);
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
             const disableChallengerReshare = acceptedFromChallenger && hasChallengerSentConfirmation;
+            const disableSampleReshare = isSamplePreview && disableChallengerReshare;
             const challengerAgreesWithCreator = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -2146,12 +2148,19 @@
             const challengerVoteLabel = samePosition ? "Both Wrong!" : `${escapedChallengerName} Won!`;
             const showCreatorWaitingForConfirmation =
                 isCreatorView && flowStep === "invite" && !hasChallengerSentConfirmation;
+            const callToActionLabel = isSamplePreview ? "Start your first bet" : "Call the bet early";
             app.innerHTML = `
                 ${isCreatorView ? renderCreatorBreadcrumb(flowStep, true) : renderChallengerBreadcrumb(challengerFlowStep)}
                 <h1>${escapedTitle || "Your Bet"}</h1>
                 <div class="countdown" id="countdown">--</div>
                 <p class="subtitle bet-timing-line" style="text-align: center; margin-top: 0; margin-bottom: 2px;">${betTimingLabel}</p>
-                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod ? `<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="add-calendar-pill" class="pill add-calendar-pill" type="button">${calendarActionLabel("Add to calendar")}</button></p>` : ""}
+                ${acceptedFromChallenger && hasChallengerAccepted && hasChallengerSentConfirmation && !votingPeriod
+                    ? `<p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;">${
+                    isSamplePreview
+                        ? `<span class="pill add-calendar-pill" aria-disabled="true" tabindex="-1">${calendarActionLabel("Add to calendar")}</span>`
+                        : `<button id="add-calendar-pill" class="pill add-calendar-pill" type="button">${calendarActionLabel("Add to calendar")}</button>`
+                }</p>`
+                    : ""}
                 <section class="matchup" aria-label="Head to head positions">
                     <article class="competitor">
                         <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
@@ -2180,9 +2189,9 @@
                 ${acceptedFromChallenger && !hasChallengerSentConfirmation ? '<p class="subtitle">Sharing the confirmation link allows you to watch the bet and vote when timer is done.</p>' : ""}
                 ${p2 || votingPeriod ? "" : '<p class="preview-accept-wrap"><a id="accept-preview" class="preview-accept-link" href="#">Preview what they\'ll see</a></p>'}
                 ${hasChallengerAccepted
-                    ? `<button id="call-bet-early-cta" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Call the bet early</button>${
+                    ? `<button id="call-bet-early-cta" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">${callToActionLabel}</button>${
                     acceptedFromChallenger && hasChallengerSentConfirmation
-                        ? disableChallengerReshare
+                        ? disableSampleReshare
                             ? `<p class="reshare-confirm-wrap"><span class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link" aria-disabled="true" tabindex="-1">${shareActionLabel("Re-share the link to this bet")}</span></p>`
                             : `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">${shareActionLabel("Re-share the link to this bet")}</button></p>`
                         : ""
@@ -2250,6 +2259,12 @@
             }
             if (hasChallengerAccepted) {
                 document.getElementById("call-bet-early-cta").addEventListener("click", () => {
+                    if (isSamplePreview) {
+                        trackBetsieEvent("betsie_cta", { cta_id: "sample_start_first_bet", location: "sample_game_on" });
+                        closeLandingPreviewModal();
+                        updateUrl("create");
+                        return;
+                    }
                     trackBetsieEvent("betsie_vote", { choice: "call_early_prompt", phase: "countdown" });
                     openEarlyEndModal();
                 });
