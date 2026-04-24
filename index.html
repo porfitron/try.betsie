@@ -839,6 +839,42 @@
             gap: 8px;
         }
 
+        .landing-preview-card {
+            width: min(100%, 620px);
+            max-height: min(86vh, 920px);
+            overflow: auto;
+            border-radius: 24px;
+            padding: 20px 18px 16px;
+        }
+
+        .landing-preview-title {
+            margin: 0;
+            font-size: clamp(1.55rem, 5.2vw, 2.55rem);
+            line-height: 1.08;
+            letter-spacing: -0.03em;
+            text-align: center;
+        }
+
+        .landing-preview-subtitle {
+            margin: 14px auto 20px;
+            max-width: 540px;
+            text-align: center;
+            color: #66708c;
+            font-size: clamp(1rem, 3.8vw, 1.15rem);
+            line-height: 1.45;
+        }
+
+        .landing-preview-list {
+            margin-bottom: 18px;
+        }
+
+        .landing-preview-note {
+            margin: 10px 0 0;
+            text-align: center;
+            font-size: clamp(0.9rem, 3.1vw, 1rem);
+            color: #002cfc;
+        }
+
         .modal-hint {
             margin: 10px 0 0;
             padding: 10px 12px;
@@ -1084,6 +1120,21 @@
         <a href="https://betsie.app" target="_blank" rel="noopener noreferrer">Betsie</a> is a trademark of
         <a href="https://squeakycheeseinc.com" target="_blank" rel="noopener noreferrer">Squeaky Cheese, Inc.</a>
     </footer>
+    <div id="landing-preview-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="landing-preview-title">
+        <div class="modal-card landing-preview-card">
+            <h2 id="landing-preview-title" class="landing-preview-title">Create a friendly bet in under a minute.</h2>
+            <p class="landing-preview-subtitle">Challenge a friend, pass each other links, and keep the vibes competitive. No account needed.</p>
+            <section class="list landing-preview-list" aria-label="Betsie highlights">
+                <div class="item"><span class="icon" aria-hidden="true">1</span>Set your bet title, details, and deadline.</div>
+                <div class="item"><span class="icon" aria-hidden="true">2</span>Exchange updates with links in iMessage or WhatsApp.</div>
+                <div class="item"><span class="icon" aria-hidden="true">3</span>Track countdown and settle with bragging rights.</div>
+            </section>
+            <div class="modal-actions">
+                <button id="landing-preview-start" class="cta" type="button">Start your first bet</button>
+            </div>
+            <p class="landing-preview-note">No email or account required!</p>
+        </div>
+    </div>
     <div id="fresh-modal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="fresh-modal-title">
         <div class="modal-card">
             <h2 id="fresh-modal-title" class="modal-title">Start fresh?</h2>
@@ -1145,6 +1196,7 @@
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
     <script>
         const app = document.getElementById("app");
+        const landingPreviewModal = document.getElementById("landing-preview-modal");
         const calendarModal = document.getElementById("calendar-modal");
         const freshModal = document.getElementById("fresh-modal");
         const shareHandoffModal = document.getElementById("share-handoff-modal");
@@ -1257,20 +1309,37 @@
             return merged;
         })();
         const isConfirmationSharePath = /^\/share\/confirm(?:-agree)?\/?$/i.test(url.pathname);
+        const hasIncomingShareableState = SHAREABLE_STATE_KEYS.some((key) => params.has(key));
         const mode = params.get("mode");
-        const title = clampText(params.get("t") || "", FIELD_LIMITS.claim);
-        const creatorName = clampText(params.get("cn") || "", FIELD_LIMITS.name);
-        const challengerName = clampText(params.get("chn") || "", FIELD_LIMITS.name);
-        const p1 = params.get("p1") || "For";
-        const p2 = clampText(params.get("p2") || "", FIELD_LIMITS.claim);
-        const deadline = params.get("d") || "";
-        const trashTalk = clampText(params.get("tt") || "", FIELD_LIMITS.trashTalk);
-        const challengerTrashTalk = clampText(params.get("ct") || "", FIELD_LIMITS.trashTalk);
+        const shouldUseSampleGameOn = !mode && !hasIncomingShareableState;
+        const sampleDeadline = new Date(Date.now() + 26 * 3600000).toISOString();
+        const sampleState = shouldUseSampleGameOn
+            ? {
+                t: "The Suns make the playoffs",
+                cn: "Maya",
+                chn: "Jules",
+                p1: "For",
+                p2: "They miss the playoffs",
+                d: sampleDeadline,
+                tt: "Book it. This one is easy.",
+                ct: "Not with that defense.",
+                src: "accept",
+                cr: "1"
+            }
+            : {};
+        const title = clampText(params.get("t") || sampleState.t || "", FIELD_LIMITS.claim);
+        const creatorName = clampText(params.get("cn") || sampleState.cn || "", FIELD_LIMITS.name);
+        const challengerName = clampText(params.get("chn") || sampleState.chn || "", FIELD_LIMITS.name);
+        const p1 = params.get("p1") || sampleState.p1 || "For";
+        const p2 = clampText(params.get("p2") || sampleState.p2 || "", FIELD_LIMITS.claim);
+        const deadline = params.get("d") || sampleState.d || "";
+        const trashTalk = clampText(params.get("tt") || sampleState.tt || "", FIELD_LIMITS.trashTalk);
+        const challengerTrashTalk = clampText(params.get("ct") || sampleState.ct || "", FIELD_LIMITS.trashTalk);
         const winner = params.get("w") || "";
-        const source = params.get("src") || (isConfirmationSharePath ? "accept" : "");
+        const source = params.get("src") || sampleState.src || (isConfirmationSharePath ? "accept" : "");
         const creatorStep = params.get("cs") || "";
         const invited = params.get("inv") || "";
-        const challengerResponded = params.get("cr") || (isConfirmationSharePath ? "1" : "");
+        const challengerResponded = params.get("cr") || sampleState.cr || (isConfirmationSharePath ? "1" : "");
         const handoffFlash = params.get("hf") || "";
         const earlyVote = params.get("ev") || "";
         const earlyEndedAt = params.get("ee") || "";
@@ -1500,6 +1569,14 @@
             calendarModal.classList.remove("is-hidden");
         }
 
+        function openLandingPreviewModal() {
+            landingPreviewModal.classList.remove("is-hidden");
+        }
+
+        function closeLandingPreviewModal() {
+            landingPreviewModal.classList.add("is-hidden");
+        }
+
         function closeCalendarModal() {
             calendarModal.classList.add("is-hidden");
         }
@@ -1720,6 +1797,11 @@
             openGoogleCalendar();
             closeCalendarModal();
         });
+        document.getElementById("landing-preview-start").addEventListener("click", () => {
+            trackBetsieEvent("betsie_cta", { cta_id: "landing_preview_start_bet", location: "landing_preview_modal" });
+            closeLandingPreviewModal();
+            updateUrl("create");
+        });
         document.getElementById("calendar-icloud").addEventListener("click", () => {
             trackBetsieEvent("betsie_calendar_export", { calendar_provider: "icloud_ics" });
             createCalendarFile("betsie-deadline-apple.ics");
@@ -1869,6 +1951,7 @@
                 trackBetsieEvent("betsie_cta", { cta_id: "start_first_bet", location: "landing" });
                 updateUrl("create");
             });
+            openLandingPreviewModal();
         }
 
         function renderCreatorBreadcrumb(step, allowForwardNav = false) {
@@ -2218,6 +2301,12 @@
                 } else {
                     removeHandoffFlashFromAddressBar();
                 }
+            }
+            if (shouldUseSampleGameOn) {
+                requestAnimationFrame(() => {
+                    trackBetsieEvent("betsie_modal", { modal_id: "landing_preview", action: "auto_open_default_index" });
+                    openLandingPreviewModal();
+                });
             }
 
             function setVotingPeriod(isVotingPeriod) {
