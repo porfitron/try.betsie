@@ -2544,10 +2544,7 @@
                 const next = new URL(window.location.href);
                 next.search = "mode=create";
                 next.hash = "";
-                const newWindow = window.open(next.toString(), "_blank", "noopener");
-                if (!newWindow) {
-                    window.location.href = next.toString();
-                }
+                window.open(next.toString(), "_blank", "noopener");
             });
             if (winner) {
                 trackBetsieEvent("betsie_settle_celebration", { action: "auto_open" });
