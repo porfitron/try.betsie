@@ -6,7 +6,8 @@ Betsie Lite is a lightweight, backend-less head unit for the messaging app peopl
 - **Backend-less by Design:** Bet data is stored in URL query parameters; no backend database or user accounts for the Lite experience.
 - **Chat-Native Head Unit:** The web app is the control panel, while the user's preferred chat app is the transport and context layer.
 - **PWA First:** Built with vanilla HTML, CSS, and JS, installable to the home screen with offline-ready properties.
-- **Share Loop:** Optimize the "Compose -> Share -> Challenge -> Settle" loop inside existing message threads.
+- **Share Loop:** Optimize the implemented loop: `Create -> Confirm -> Invite -> Accept -> Confirm -> Game On -> Vote/Settle -> Share result`.
+- **Stage-First UX:** Preserve visible breadcrumb labels exactly as implemented (`Create/Confirm/Invite` for Creator and `Accept/Confirm/Game On` for Challenger).
 
 ## Docs
 

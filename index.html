@@ -1861,6 +1861,7 @@
             if (role === "creator") {
                 updateUrl("active", { inv: "1", cs: "invite" });
             } else if (role === "challenger") {
+                trackBetsieEvent("betsie_challenger_step", { step: "respond", source: "handoff_copy" });
                 updateUrl("active", { src: "accept", cr: "1" });
             }
         });
@@ -2244,6 +2245,7 @@
                         return;
                     }
                     if (!isCreatorView && !hasChallengerSentConfirmation) {
+                        trackBetsieEvent("betsie_challenger_step", { step: "respond", source: "share_button" });
                         updateUrl("active", { src: "accept", cr: "1" });
                     }
                 });
@@ -2439,6 +2441,7 @@
                     position_mode: agreeWithCreator ? "agree" : "custom",
                     has_trash_talk: form.get("challengerTrashTalk") ? "yes" : "no"
                 });
+                trackBetsieEvent("betsie_challenger_step", { step: "accept_submitted", source: "form_submit" });
                 updateUrl("active", {
                     chn: nextChallengerName,
                     p2: nextPosition || title,
@@ -2523,7 +2526,6 @@
                         <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
                 </section>
-                ${winner ? "" : '<button id="creator-wins" class="cta" type="button">Declare creator winner</button><button id="challenger-wins" class="ghost" type="button">Declare challenger winner</button>'}
                 <button id="share-result" class="cta" type="button">${shareActionLabel("Share result")}</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
@@ -2532,16 +2534,6 @@
             if (promoLink) {
                 promoLink.addEventListener("click", () => {
                     trackBetsieEvent("betsie_outbound_click", { link_id: "app_download_promo", destination: "betsie_app_download" });
-                });
-            }
-            if (!winner) {
-                document.getElementById("creator-wins").addEventListener("click", () => {
-                    trackBetsieEvent("betsie_settle_pick", { choice: "creator", phase: "settle_screen" });
-                    updateUrl("settle", { w: "1" });
-                });
-                document.getElementById("challenger-wins").addEventListener("click", () => {
-                    trackBetsieEvent("betsie_settle_pick", { choice: "challenger", phase: "settle_screen" });
-                    updateUrl("settle", { w: "2" });
                 });
             }
             document.getElementById("share-result").addEventListener("click", () => {

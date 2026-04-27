@@ -21,7 +21,7 @@ All custom events go through a single helper that wraps `gtag("event", name, par
 | `betsie_surface_view` | Fires on each load. Params include `surface` (`landing`, `create`, `accept`, `active`, `settle`, …), `url_mode`, `has_winner`, and flags that mirror URL state. Use for “which screen was seen” and high-level funnels. |
 | `betsie_cta` | Primary CTAs, e.g. `cta_id`: `start_first_bet` (from landing), `start_new_bet` (from settle). `location` disambiguates. |
 | `betsie_form_submit` | `form_id`: `create_bet` (creator finished create step), `accept_bet` (challenger submitted). Additional params: `has_trash_talk`, `position_mode` (accept), etc. |
-| `betsie_vote` | Voting and related actions. For **deadline / voting UI**, `phase` includes `after_deadline`; `choice` includes `creator`, `challenger`, `no_contest` (and other call-early / countdown values). |
+| `betsie_vote` | Voting and related actions. For **deadline / voting UI**, `phase` includes `after_deadline`; `choice` includes `creator`, `challenger`, `no_contest` (plus call-early/countdown actions such as `call_early_prompt` and `call_early_confirm`). |
 | `betsie_settle_pick` | Winner picked from the **settle** view when the outcome is chosen there (less common than voting from `active`). |
 | `betsie_settle_celebration` | Settle outcome celebration modal (e.g. `action` `auto_open`). Supplementary, not a unique “per bet” signal by itself. |
 | `betsie_share` | A share **completed** via `navigator.share` or fallback **clipboard** copy. `share_method`: `native` or `clipboard`; `share_context` when provided. |
@@ -31,6 +31,12 @@ All custom events go through a single helper that wraps `gtag("event", name, par
 | `betsie_creator_step` / `betsie_challenger_step` | Breadcrumb navigation (supplementary; not a substitute for `form_submit`). |
 | `betsie_accept_position` | Agree vs custom on accept screen (UX detail). |
 | `betsie_preview`, `betsie_calendar_*`, `betsie_outbound_*`, `betsie_start_fresh`, `betsie_header_logo` | Supporting and hygiene events; not core funnel counts unless you explicitly want them. |
+
+### Implemented stage language reference
+
+- **Creator stages:** `Create -> Confirm -> Invite` (tracked with `betsie_creator_step` and URL state).
+- **Challenger stages:** `Accept -> Confirm -> Game On` (tracked with `betsie_challenger_step` and `challenger_responded` state).
+- **CTA labels in-product** (for dashboard annotation consistency): "Start a quick bet", "Next", "Invite challenger", "Send a reminder", "Confirm and send", "Call the bet early", "Share result", "Start new bet".
 
 ## Recommended definitions for reporting
 
@@ -64,6 +70,10 @@ Pick **one** as the official “started” metric. Do not sum A and B for a sing
 | **Primary** | `betsie_vote` with `phase` = `after_deadline` and `choice` in { `creator`, `challenger`, `no_contest` } |
 | **Alternate** | `betsie_settle_pick` when the result is set from the settle screen before `w` is in the URL (edge case) |
 
+Interpretation for same-position bets:
+- `choice = creator` may represent **both right**.
+- `choice = challenger` may represent **both wrong**.
+
 **Avoid** using only `betsie_surface_view` on settle with a winner, or `betsie_settle_celebration`, as the sole “completion” metric: reloads and revisits can **inflate** counts. Prefer the vote / settle_pick events for **“outcome was recorded (once)”.**
 
 ### Share button usage
@@ -74,6 +84,7 @@ Pick **one** as the official “started” metric. Do not sum A and B for a sing
 | “Touched **share** UI broadly” | Combine in **Explore** with care: `betsie_share_intent`, `betsie_share_flow`, `betsie_share_handoff` — can **double-count** a single user action across steps; label dashboards clearly. |
 
 **Recommendation for leadership metrics:** use **`betsie_share` event count** (and optional breakdown) as the default “shares that completed.”
+If you want receipt-specific sharing, filter `betsie_share_intent` by `share_context = settle_result` and pair with `betsie_share` completion totals.
 
 ## GA4 admin checklist
 

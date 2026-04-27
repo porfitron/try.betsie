@@ -6,6 +6,7 @@ This document outlines the design system for the Betsie Lite PWA. The goal is to
 - Betsie Lite is the control surface; iMessage, SMS, and WhatsApp are the conversation surface.
 - Design for "in and out" usage: users should complete key actions in seconds, then return to chat.
 - Prioritize one dominant action per screen, usually "Share" or "Accept."
+- Preserve implemented progress stage labels in UI: Creator (`Create -> Confirm -> Invite`) and Challenger (`Accept -> Confirm -> Game On`).
 
 ## 1. Brand Persona
 - **Friendly & Social:** Accessible, welcoming, and built for interaction.
@@ -68,11 +69,19 @@ The typography uses humanist sans-serif typefaces to balance readability with a 
 
 ## 7. Content Design Rules
 - Use direct, conversational microcopy that reads naturally when shared in a message thread.
-- Write CTAs as verbs with outcomes: "Share Challenge", "Accept Bet", "Settle Result".
+- Use implemented CTA language for consistency: "Start a quick bet", "Next", "Invite challenger", "Send a reminder", "Confirm and send", "Call the bet early", "Share result", "Start new bet".
 - Avoid long explanations in-view; keep explanatory text behind optional disclosure patterns when needed.
 - For creator invite copy, prefer statement-first phrasing (claim + optional hook) rather than "YES/NO" framing.
+- In challenger choice copy, use implemented labels: "Agree with {Creator}" and "Make a different call."
 
-## 8. Input Limits and Composition
+## 8. Stage and Outcome Language
+- **Creator staged journey:** `Create` (input form) -> `Confirm` (review state) -> `Invite` (share handoff).
+- **Challenger staged journey:** `Accept` (response form) -> `Confirm` (share confirmation) -> `Game On` (returned-link state).
+- **Voting labels in active state:** `{Creator} Won!`, `{Challenger} Won!`, and same-position variants `Both Right!` / `Both Wrong!`.
+- **No contest path:** secondary inline action copy: "If no one was right, click here."
+- **Receipt language:** use "Bet Receipt" heading and "Share result" as primary settlement CTA.
+
+## 9. Input Limits and Composition
 - Enforce strict field lengths to protect message readability in chat apps:
   - Name fields: `20`
   - Claim/position fields: `70`
