@@ -1777,7 +1777,7 @@
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(`${shareText}\n${normalizedShareUrl}`);
                 trackBetsieEvent("betsie_share", { share_method: "clipboard", ...analytics });
-                alert("Share message copied.");
+                alert("This message has been copied. For your friend to get the bet, you need to paste it into a chat or email message to them.");
             }
         }
 
@@ -2051,7 +2051,7 @@
                 const deadlineValue = String(form.get("deadline") || "");
                 const parsedDeadline = new Date(deadlineValue);
                 if (!deadlineValue || Number.isNaN(parsedDeadline.getTime()) || parsedDeadline.getTime() < Date.now()) {
-                    alert("Please choose a bet end time that is now or later.");
+                    alert("Please choose a bet end time that is in the future.");
                     return;
                 }
                 trackBetsieEvent("betsie_form_submit", { form_id: "create_bet", has_trash_talk: form.get("trashTalk") ? "yes" : "no" });
