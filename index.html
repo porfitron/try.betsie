@@ -849,7 +849,7 @@
 
         .landing-preview-title {
             margin: 0;
-            font-size: clamp(1.55rem, 5.2vw, 2.55rem);
+            font-size: clamp(1.35rem, 4.6vw, 2.2rem);
             line-height: 1.08;
             letter-spacing: -0.03em;
             text-align: center;
@@ -1820,7 +1820,10 @@
         });
         document.getElementById("fresh-confirm").addEventListener("click", () => {
             trackBetsieEvent("betsie_start_fresh", { action: "confirm" });
-            window.location.href = window.location.pathname;
+            const next = new URL(window.location.href);
+            next.search = "mode=create";
+            next.hash = "";
+            window.location.href = next.toString();
         });
         freshModal.addEventListener("click", (event) => {
             if (event.target === freshModal) {
@@ -2538,7 +2541,13 @@
             });
             document.getElementById("new-bet").addEventListener("click", () => {
                 trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
-                window.location.href = window.location.pathname;
+                const next = new URL(window.location.href);
+                next.search = "mode=create";
+                next.hash = "";
+                const newWindow = window.open(next.toString(), "_blank", "noopener");
+                if (!newWindow) {
+                    window.location.href = next.toString();
+                }
             });
             if (winner) {
                 trackBetsieEvent("betsie_settle_celebration", { action: "auto_open" });
