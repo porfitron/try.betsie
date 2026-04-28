@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://try.bestie.app/sitemap.xml
+Sitemap: https://try.betsie.app/sitemap.xml
