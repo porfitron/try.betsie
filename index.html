@@ -2112,7 +2112,6 @@
             const challengerButtonText = hasChallengerSentConfirmation ? "Re-share the link to this bet" : "Confirm and send";
             const challengerButtonLabel = shareActionLabel(challengerButtonText);
             const challengerButtonClass = hasChallengerSentConfirmation ? "ghost" : "cta";
-            const disableChallengerReshare = acceptedFromChallenger && hasChallengerSentConfirmation;
             const challengerAgreesWithCreator = hasChallengerAccepted && String(p2).trim() === String(title).trim();
             const challengeShareUrl = (() => {
                 const shareUrl = new URL(window.location.href);
@@ -2190,9 +2189,7 @@
                 ${hasChallengerAccepted
                     ? `<button id="call-bet-early-cta" class="cta${votingPeriod ? " is-hidden" : ""}" type="button">Call the bet early</button>${
                     acceptedFromChallenger && hasChallengerSentConfirmation
-                        ? disableChallengerReshare
-                            ? `<p class="reshare-confirm-wrap"><span class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link" aria-disabled="true" tabindex="-1">${shareActionLabel("Re-share the link to this bet")}</span></p>`
-                            : `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">${shareActionLabel("Re-share the link to this bet")}</button></p>`
+                        ? `<p class="reshare-confirm-wrap"><button type="button" class="reshare-confirm-link${votingPeriod ? " is-hidden" : ""}" id="share-link">${shareActionLabel("Re-share the link to this bet")}</button></p>`
                         : ""
                 }`
                     : ""}
