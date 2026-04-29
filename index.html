@@ -1597,10 +1597,11 @@
             }
             const dateStamp = new Date().toISOString().slice(0, 10);
             const filename = `betsie-receipt-${dateStamp}.png`;
-            if (navigator.share && navigator.canShare) {
+            if (navigator.share) {
                 try {
                     const imageFile = new File([blob], filename, { type: "image/png" });
-                    if (navigator.canShare({ files: [imageFile] })) {
+                    const supportsFileShare = typeof navigator.canShare !== "function" || navigator.canShare({ files: [imageFile] });
+                    if (supportsFileShare) {
                         await navigator.share({
                             title: "Betsie receipt",
                             text: "Save these bet results.",
