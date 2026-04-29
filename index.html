@@ -546,12 +546,7 @@
         }
 
         .competitor.is-winner {
-            border-color: rgba(16, 185, 129, 0.9);
-            box-shadow:
-                0 0 0 2px rgba(16, 185, 129, 0.34),
-                0 0 18px rgba(16, 185, 129, 0.48),
-                0 10px 24px rgba(16, 185, 129, 0.2);
-            animation: winnerPulse 1.8s ease-in-out infinite;
+            border-color: rgba(245, 158, 11, 0.95);
         }
 
         .competitor.is-loser {
@@ -561,6 +556,50 @@
                 0 0 18px rgba(239, 68, 68, 0.48),
                 0 10px 24px rgba(239, 68, 68, 0.2);
             animation: loserPulse 1.8s ease-in-out infinite;
+        }
+
+        .avatar.flip-coin {
+            position: relative;
+            background: transparent;
+            transform-style: preserve-3d;
+        }
+
+        .avatar.flip-coin .avatar-face {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backface-visibility: hidden;
+        }
+
+        .avatar.flip-coin .avatar-face.front.creator {
+            background: linear-gradient(160deg, #F36D6F, #E75C60);
+            color: #FFF;
+        }
+
+        .avatar.flip-coin .avatar-face.front.challenger {
+            background: linear-gradient(160deg, #64748B, #334155);
+            color: #FFF;
+        }
+
+        .avatar.flip-coin .avatar-face.back {
+            background: linear-gradient(160deg, #FDE68A, #F59E0B);
+            color: #78350F;
+            transform: rotateY(180deg);
+        }
+
+        .avatar.flip-coin.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .avatar.is-flipping {
+            animation: winnerAvatarFlip 700ms cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform-origin: center;
+            backface-visibility: hidden;
+            will-change: transform;
+            animation-fill-mode: forwards;
         }
 
         @keyframes winnerPulse {
@@ -584,6 +623,18 @@
                     0 0 14px rgba(16, 185, 129, 0.38),
                     0 8px 20px rgba(16, 185, 129, 0.16);
                 transform: scale(1);
+            }
+        }
+
+        @keyframes winnerAvatarFlip {
+            0% {
+                transform: perspective(900px) rotateY(0deg) scale(1.01);
+            }
+            50% {
+                transform: perspective(900px) rotateY(90deg) scale(1.03);
+            }
+            100% {
+                transform: perspective(900px) rotateY(180deg) scale(1.01);
             }
         }
 
@@ -873,6 +924,14 @@
 
         .landing-preview-list {
             margin-bottom: 18px;
+        }
+
+        .landing-preview-list .item {
+            align-items: flex-start;
+        }
+
+        .landing-preview-list .item .icon {
+            margin-top: 2px;
         }
 
 
@@ -1601,6 +1660,7 @@
                 clearTimeout(celebrationTimer);
                 celebrationTimer = null;
             }
+            triggerWinnerPreviewFlip();
         }
 
         function openCelebrationModal() {
@@ -1612,6 +1672,34 @@
             celebrationTimer = setTimeout(() => {
                 closeCelebrationModal();
             }, reduceMotion ? 900 : 2400);
+        }
+
+        function triggerWinnerPreviewFlip() {
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reduceMotion) {
+                return;
+            }
+            const winningCards = app.querySelectorAll(".competitor.is-winner");
+            if (!winningCards.length) {
+                return;
+            }
+            winningCards.forEach((card) => {
+                const avatar = card.querySelector(".avatar");
+                if (!avatar) {
+                    return;
+                }
+                avatar.classList.remove("is-flipped");
+                avatar.classList.remove("is-flipping");
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        avatar.classList.add("is-flipping");
+                        avatar.addEventListener("animationend", () => {
+                            avatar.classList.remove("is-flipping");
+                            avatar.classList.add("is-flipped");
+                        }, { once: true });
+                    });
+                }, 1000);
+            });
         }
 
         function urlWithoutHandoffFlash(urlString) {
@@ -2460,8 +2548,8 @@
             const noContest = winner === "0";
             const bothWin = samePosition && winner === "1";
             const bothLose = samePosition && winner === "2";
-            const creatorIsWinner = bothWin || winner === "1";
-            const challengerIsWinner = bothWin || winner === "2";
+            const creatorIsWinner = bothWin || (!bothLose && winner === "1");
+            const challengerIsWinner = bothWin || (!bothLose && winner === "2");
             const creatorIsLoser = bothLose;
             const challengerIsLoser = bothLose;
             const creatorWinnerClass = creatorIsWinner ? " is-winner" : "";
@@ -2511,13 +2599,19 @@
                 <h1>${settleHeadline}</h1>
                 <section class="matchup" aria-label="Final head to head">
                     <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
-                        <div class="avatar creator" aria-hidden="true">${creatorAvatar}</div>
+                        <div class="avatar creator flip-coin" aria-hidden="true">
+                            <span class="avatar-face front creator">${creatorAvatar}</span>
+                            <span class="avatar-face back">${creatorAvatar}</span>
+                        </div>
                         <div class="competitor-label">${escapedCreatorName}</div>
                         <div class="competitor-position">${escapeHtml(title || "-")}</div>
                         <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
                     </article>
                     <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
-                        <div class="avatar challenger" aria-hidden="true">${challengerAvatar}</div>
+                        <div class="avatar challenger flip-coin" aria-hidden="true">
+                            <span class="avatar-face front challenger">${challengerAvatar}</span>
+                            <span class="avatar-face back">${challengerAvatar}</span>
+                        </div>
                         <div class="competitor-label">${escapedChallengerName}</div>
                         <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
                         <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
