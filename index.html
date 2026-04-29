@@ -551,6 +551,22 @@
             text-align: center;
         }
 
+        .competitor.is-winner {
+            border-color: #B8860B;
+            background: linear-gradient(180deg, rgba(255, 250, 228, 0.98), rgba(255, 233, 160, 0.95));
+            box-shadow:
+                0 0 0 2px rgba(184, 134, 11, 0.28),
+                0 0 24px rgba(212, 175, 55, 0.35),
+                0 10px 24px rgba(184, 134, 11, 0.24);
+            color: #000;
+        }
+
+        .competitor.is-winner .competitor-label,
+        .competitor.is-winner .competitor-position,
+        .competitor.is-winner .competitor-quote {
+            color: #000;
+        }
+
         .voting-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -596,7 +612,13 @@
         .avatar.flip-coin .avatar-face.back {
             background: linear-gradient(160deg, #FDE68A, #F59E0B);
             color: #78350F;
+            border: 1px solid #B8860B;
             transform: rotateY(180deg);
+        }
+
+        .avatar.flip-coin .avatar-face.back .winner-icon {
+            font-size: 1.35rem;
+            line-height: 1;
         }
 
         .avatar.flip-coin.is-flipped {
@@ -2726,7 +2748,10 @@
             const challengerDisplayName = challengerName.trim() || "Challenger";
             const name = winner === "1" ? creatorDisplayName : winner === "2" ? challengerDisplayName : "";
             const samePosition = Boolean(p2) && String(p2).trim() === String(title).trim();
-            const betDateLabel = deadline ? new Date(deadline).toLocaleDateString() : "";
+            const parsedEarlyEndedAt = earlyEndedAt ? new Date(earlyEndedAt) : null;
+            const hasValidEarlyEndDate = parsedEarlyEndedAt && !Number.isNaN(parsedEarlyEndedAt.getTime());
+            const betEndedDateSource = hasValidEarlyEndDate ? parsedEarlyEndedAt : (deadline || "");
+            const betDateLabel = betEndedDateSource ? new Date(betEndedDateSource).toLocaleDateString() : "";
             const noContest = winner === "0";
             const bothWin = samePosition && winner === "1";
             const bothLose = samePosition && winner === "2";
@@ -2776,16 +2801,15 @@
             })();
             app.innerHTML = `
                 <div id="settle-receipt-capture">
-                    <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Bet Receipt</span></div>
-                    <p class="subtitle" style="text-align: center; margin-bottom: 6px;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                    <div class="brand-row"><span class="brand-label">Bet Receipt</span></div>
+                    <h1>${settleHeadline}</h1>
                     ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
                     <p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="save-results-pill" class="pill save-results-pill" type="button">${saveImageActionLabel("Download receipt")}</button></p>
-                    <h1>${settleHeadline}</h1>
                     <section class="matchup" aria-label="Final head to head">
                         <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
                             <div class="avatar creator flip-coin" aria-hidden="true">
                                 <span class="avatar-face front creator">${creatorAvatar}</span>
-                                <span class="avatar-face back">${creatorAvatar}</span>
+                                <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
                             </div>
                             <div class="competitor-label">${escapedCreatorName}</div>
                             <div class="competitor-position">${escapeHtml(title || "-")}</div>
@@ -2794,7 +2818,7 @@
                         <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
                             <div class="avatar challenger flip-coin" aria-hidden="true">
                                 <span class="avatar-face front challenger">${challengerAvatar}</span>
-                                <span class="avatar-face back">${challengerAvatar}</span>
+                                <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
                             </div>
                             <div class="competitor-label">${escapedChallengerName}</div>
                             <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
@@ -2802,7 +2826,7 @@
                         </article>
                     </section>
                 </div>
-                <button id="share-result" class="cta" type="button">${shareActionLabel("Share result")}</button>
+                <button id="share-result" class="cta" type="button">${shareActionLabel("Share this receipt")}</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
             `;
