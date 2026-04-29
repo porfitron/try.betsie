@@ -480,6 +480,19 @@
             vertical-align: middle;
         }
 
+        .save-image-action-icon {
+            width: 1.05em;
+            height: 1.05em;
+            display: inline-block;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
+
+        .save-image-action-icon path,
+        .save-image-action-icon rect {
+            stroke: currentColor;
+        }
+
         form {
             display: grid;
             gap: 12px;
@@ -768,6 +781,17 @@
         }
 
         .add-calendar-pill {
+            border: 0;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--betsie-coral);
+        }
+
+        .save-results-pill {
             border: 0;
             cursor: pointer;
             font: inherit;
@@ -1433,6 +1457,167 @@
         function calendarActionLabel(label) {
             const safeLabel = escapeHtml(String(label || ""));
             return `<span class="share-action-label"><svg class="calendar-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="5" width="16" height="15" rx="2" ry="2" stroke-width="2"/><path d="M8 3V7M16 3V7M4 10H20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${safeLabel}</span></span>`;
+        }
+
+        function saveImageActionLabel(label) {
+            const safeLabel = escapeHtml(String(label || ""));
+            return `<span class="share-action-label"><svg class="save-image-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="2.5" ry="2.5" stroke-width="2"/><path d="M8.5 15.5L11 12.5L13 14.5L15.5 11.5L18 15.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9.5H9.01" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${safeLabel}</span></span>`;
+        }
+
+        let html2canvasLoaderPromise = null;
+        function ensureHtml2CanvasLoaded() {
+            if (typeof window.html2canvas === "function") {
+                return Promise.resolve(window.html2canvas);
+            }
+            if (html2canvasLoaderPromise) {
+                return html2canvasLoaderPromise;
+            }
+            html2canvasLoaderPromise = new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+                script.async = true;
+                script.onload = () => {
+                    if (typeof window.html2canvas === "function") {
+                        resolve(window.html2canvas);
+                    } else {
+                        reject(new Error("html2canvas failed to initialize."));
+                    }
+                };
+                script.onerror = () => {
+                    reject(new Error("Unable to load screenshot library."));
+                };
+                document.head.appendChild(script);
+            }).catch((error) => {
+                html2canvasLoaderPromise = null;
+                throw error;
+            });
+            return html2canvasLoaderPromise;
+        }
+
+        async function saveReceiptAsImage() {
+            const captureRoot = document.getElementById("settle-receipt-capture");
+            if (!captureRoot) {
+                throw new Error("Receipt area not found.");
+            }
+            const html2canvas = await ensureHtml2CanvasLoaded();
+            const pixelRatio = window.devicePixelRatio || 1;
+            const canvas = await html2canvas(captureRoot, {
+                backgroundColor: null,
+                scale: Math.min(2, Math.max(1, pixelRatio)),
+                useCORS: true,
+                logging: false,
+                onclone: (doc) => {
+                    const saveButtonInClone = doc.getElementById("save-results-pill");
+                    if (saveButtonInClone) {
+                        saveButtonInClone.remove();
+                    }
+                    const clonedCaptureRoot = doc.getElementById("settle-receipt-capture");
+                    if (clonedCaptureRoot) {
+                        clonedCaptureRoot.style.background = "linear-gradient(160deg, #FEDA75 0%, #FA7E1E 24%, #D62976 52%, #962FBF 74%, #4F5BD5 100%)";
+                        clonedCaptureRoot.style.borderRadius = "26px";
+                        clonedCaptureRoot.style.padding = "18px";
+                        const receiptBrandRow = clonedCaptureRoot.querySelector(".brand-row");
+                        if (receiptBrandRow && receiptBrandRow.nextElementSibling && receiptBrandRow.nextElementSibling.classList.contains("subtitle")) {
+                            receiptBrandRow.nextElementSibling.remove();
+                        }
+                        const subtitleNodes = Array.from(clonedCaptureRoot.querySelectorAll(".subtitle"));
+                        const betEndedLine = subtitleNodes.find((node) => node.textContent && node.textContent.trim().startsWith("Bet ended:"));
+                        const matchupSection = clonedCaptureRoot.querySelector(".matchup");
+                        if (betEndedLine && matchupSection) {
+                            betEndedLine.style.marginTop = "8px";
+                            betEndedLine.style.marginBottom = "0";
+                            matchupSection.insertAdjacentElement("afterend", betEndedLine);
+                        }
+                        const clonedFlipAvatars = clonedCaptureRoot.querySelectorAll(".avatar.flip-coin");
+                        clonedFlipAvatars.forEach((avatar) => {
+                            avatar.classList.remove("is-flipped", "is-flipping");
+                            avatar.style.transform = "none";
+                            avatar.style.transformStyle = "flat";
+                            const winnerCard = avatar.closest(".competitor.is-winner");
+                            const backFace = avatar.querySelector(".avatar-face.back");
+                            const frontFaces = avatar.querySelectorAll(".avatar-face.front");
+                            frontFaces.forEach((face) => {
+                                face.style.transform = "none";
+                                face.style.backfaceVisibility = "visible";
+                            });
+                            if (winnerCard) {
+                                frontFaces.forEach((face) => {
+                                    face.style.display = "none";
+                                });
+                                if (backFace) {
+                                    backFace.style.display = "flex";
+                                    backFace.style.transform = "none";
+                                    backFace.style.backfaceVisibility = "visible";
+                                }
+                            } else {
+                                if (backFace) {
+                                    backFace.style.display = "none";
+                                }
+                                frontFaces.forEach((face) => {
+                                    face.style.display = "flex";
+                                });
+                            }
+                        });
+                        const lockup = doc.createElement("img");
+                        lockup.src = "/Betsie-Wordmark-Red.png";
+                        lockup.alt = "Betsie wordmark logo";
+                        lockup.setAttribute("aria-hidden", "true");
+                        lockup.style.display = "block";
+                        lockup.style.width = "160px";
+                        lockup.style.maxWidth = "62%";
+                        lockup.style.height = "auto";
+                        lockup.style.margin = "0 auto 10px";
+                        clonedCaptureRoot.insertBefore(lockup, clonedCaptureRoot.firstChild);
+                        const receiptCard = doc.createElement("div");
+                        receiptCard.style.background = "#FFFFFF";
+                        receiptCard.style.borderRadius = "18px";
+                        receiptCard.style.padding = "14px 12px 12px";
+                        receiptCard.style.boxShadow = "0 12px 28px rgba(17, 24, 39, 0.22)";
+                        while (clonedCaptureRoot.firstChild) {
+                            receiptCard.appendChild(clonedCaptureRoot.firstChild);
+                        }
+                        clonedCaptureRoot.appendChild(receiptCard);
+                        const attribution = doc.createElement("p");
+                        attribution.textContent = "This bet was played on https://try.betsie.app";
+                        attribution.style.margin = "12px 0 2px";
+                        attribution.style.textAlign = "center";
+                        attribution.style.fontSize = "0.73rem";
+                        attribution.style.lineHeight = "1.45";
+                        attribution.style.color = "rgba(255, 255, 255, 0.9)";
+                        attribution.style.fontFamily = "\"Avenir Next\", Avenir, \"Poppins\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif";
+                        clonedCaptureRoot.appendChild(attribution);
+                    }
+                }
+            });
+            const blob = await new Promise((resolve) => {
+                canvas.toBlob(resolve, "image/png", 1);
+            });
+            if (!blob) {
+                throw new Error("Could not generate image.");
+            }
+            const dateStamp = new Date().toISOString().slice(0, 10);
+            const filename = `betsie-receipt-${dateStamp}.png`;
+            if (navigator.share && navigator.canShare) {
+                try {
+                    const imageFile = new File([blob], filename, { type: "image/png" });
+                    if (navigator.canShare({ files: [imageFile] })) {
+                        await navigator.share({
+                            title: "Betsie receipt",
+                            text: "Save these bet results.",
+                            files: [imageFile]
+                        });
+                        return;
+                    }
+                } catch (_) {
+                    // Continue to download fallback.
+                }
+            }
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = objectUrl;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(objectUrl);
         }
 
         function avatarLetters(name, fallback = "") {
@@ -2589,30 +2774,33 @@
                 return resultUrl.toString();
             })();
             app.innerHTML = `
-                <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Bet Receipt</span></div>
-                <p class="subtitle" style="text-align: center; margin-bottom: 6px;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
-                ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
-                <h1>${settleHeadline}</h1>
-                <section class="matchup" aria-label="Final head to head">
-                    <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
-                        <div class="avatar creator flip-coin" aria-hidden="true">
-                            <span class="avatar-face front creator">${creatorAvatar}</span>
-                            <span class="avatar-face back">${creatorAvatar}</span>
-                        </div>
-                        <div class="competitor-label">${escapedCreatorName}</div>
-                        <div class="competitor-position">${escapeHtml(title || "-")}</div>
-                        <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
-                    </article>
-                    <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
-                        <div class="avatar challenger flip-coin" aria-hidden="true">
-                            <span class="avatar-face front challenger">${challengerAvatar}</span>
-                            <span class="avatar-face back">${challengerAvatar}</span>
-                        </div>
-                        <div class="competitor-label">${escapedChallengerName}</div>
-                        <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
-                        <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
-                    </article>
-                </section>
+                <div id="settle-receipt-capture">
+                    <div class="brand-row"><span class="brand-dot"></span><span class="brand-label">Bet Receipt</span></div>
+                    <p class="subtitle" style="text-align: center; margin-bottom: 6px;">${title ? `${escapedCreatorName}'s bet: ${escapeHtml(title)}` : "Settle the outcome and share the result."}</p>
+                    ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
+                    <p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="save-results-pill" class="pill save-results-pill" type="button">${saveImageActionLabel("Download receipt")}</button></p>
+                    <h1>${settleHeadline}</h1>
+                    <section class="matchup" aria-label="Final head to head">
+                        <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
+                            <div class="avatar creator flip-coin" aria-hidden="true">
+                                <span class="avatar-face front creator">${creatorAvatar}</span>
+                                <span class="avatar-face back">${creatorAvatar}</span>
+                            </div>
+                            <div class="competitor-label">${escapedCreatorName}</div>
+                            <div class="competitor-position">${escapeHtml(title || "-")}</div>
+                            <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
+                        </article>
+                        <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
+                            <div class="avatar challenger flip-coin" aria-hidden="true">
+                                <span class="avatar-face front challenger">${challengerAvatar}</span>
+                                <span class="avatar-face back">${challengerAvatar}</span>
+                            </div>
+                            <div class="competitor-label">${escapedChallengerName}</div>
+                            <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
+                            <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
+                        </article>
+                    </section>
+                </div>
                 <button id="share-result" class="cta" type="button">${shareActionLabel("Share result")}</button>
                 <button id="new-bet" class="ghost" type="button">Start new bet</button>
                 <div class="banner"><a id="betsie-app-promo" href="https://betsie.app/download" target="_blank" rel="noopener noreferrer">Unlock history, streaks, and leaderboard with our mobile app.</a></div>
@@ -2627,6 +2815,25 @@
                 trackBetsieEvent("betsie_share_intent", { share_context: "settle_result" });
                 void shareCurrentLink(settleShareUrl, { share_context: "settle_result" });
             });
+            const saveResultsPill = document.getElementById("save-results-pill");
+            if (saveResultsPill) {
+                saveResultsPill.addEventListener("click", async () => {
+                    const originalLabel = saveImageActionLabel("Download receipt");
+                    try {
+                        saveResultsPill.disabled = true;
+                        saveResultsPill.innerHTML = saveImageActionLabel("Saving image...");
+                        trackBetsieEvent("betsie_receipt_export", { export_type: "image", action: "start" });
+                        await saveReceiptAsImage();
+                        trackBetsieEvent("betsie_receipt_export", { export_type: "image", action: "success" });
+                    } catch (error) {
+                        trackBetsieEvent("betsie_receipt_export", { export_type: "image", action: "error" });
+                        alert("Could not save image right now. Please try again.");
+                    } finally {
+                        saveResultsPill.disabled = false;
+                        saveResultsPill.innerHTML = originalLabel;
+                    }
+                });
+            }
             document.getElementById("new-bet").addEventListener("click", () => {
                 trackBetsieEvent("betsie_cta", { cta_id: "start_new_bet", location: "settle" });
                 const next = new URL(window.location.href);
