@@ -1174,10 +1174,14 @@
 
         .celebration-gif {
             width: 100%;
-            max-height: 220px;
+            max-height: 110px;
             object-fit: cover;
             display: block;
             background: #0F172A;
+        }
+
+        .celebration-gif--mirrored {
+            transform: scaleX(-1);
         }
 
         .celebration-content {
@@ -1330,6 +1334,11 @@
                 <section id="celebration-matchup" class="matchup celebration-matchup" aria-label="Final head to head"></section>
                 <button id="celebration-close" class="cta" type="button">Share results</button>
             </div>
+            <img
+                class="celebration-gif celebration-gif--mirrored"
+                src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif"
+                alt=""
+                aria-hidden="true">
         </div>
     </div>
 
