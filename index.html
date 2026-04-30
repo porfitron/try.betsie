@@ -2182,7 +2182,8 @@
         });
         celebrationModal.addEventListener("click", (event) => {
             if (event.target === celebrationModal) {
-                trackBetsieEvent("betsie_settle_celebration", { action: "backdrop_blocked" });
+                trackBetsieEvent("betsie_settle_celebration", { action: "backdrop_close" });
+                closeCelebrationModal();
             }
         });
         document.getElementById("share-handoff-primary").addEventListener("click", async () => {
