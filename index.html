@@ -1163,14 +1163,13 @@
         }
 
         .celebration-card {
-            width: min(420px, 100%);
+            width: min(560px, 100%);
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.22);
             background: #111827;
             color: #F9FAFB;
             box-shadow: var(--shadow-soft);
             overflow: hidden;
-            text-align: center;
         }
 
         .celebration-gif {
@@ -1183,12 +1182,16 @@
 
         .celebration-content {
             padding: 16px 16px 14px;
+            background: #FFF;
+            color: var(--text-primary);
         }
 
         .celebration-title {
             margin: 0;
             font-size: 1.12rem;
             letter-spacing: -0.01em;
+            text-align: center;
+            color: var(--text-primary);
         }
 
         .celebration-text {
@@ -1196,6 +1199,32 @@
             font-size: 0.9rem;
             line-height: 1.45;
             color: #D1D5DB;
+            text-align: center;
+        }
+
+        .celebration-matchup {
+            margin: 12px 0;
+        }
+
+        .celebration-matchup .competitor:not(.is-winner):not(.is-loser) {
+            background: #FFF;
+            border-color: #E5E7EB;
+        }
+
+        .celebration-matchup .competitor-label {
+            color: var(--text-secondary);
+        }
+
+        .celebration-matchup .competitor-position,
+        .celebration-matchup .competitor-quote {
+            color: var(--text-primary);
+        }
+
+        .celebration-date {
+            margin: 8px 0 0;
+            text-align: center;
+            font-size: 0.84rem;
+            color: var(--text-secondary);
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1297,8 +1326,9 @@
                 alt="Confetti celebration animation">
             <div class="celebration-content">
                 <h2 id="celebration-title" class="celebration-title">Result locked in</h2>
-                <p class="celebration-text">Big moment. Reviewing the final results now...</p>
-                <button id="celebration-close" class="cta" type="button">See final results</button>
+                <p id="celebration-date" class="celebration-date"></p>
+                <section id="celebration-matchup" class="matchup celebration-matchup" aria-label="Final head to head"></section>
+                <button id="celebration-close" class="cta" type="button">Share results</button>
             </div>
         </div>
     </div>
@@ -1312,8 +1342,8 @@
         const shareHandoffModal = document.getElementById("share-handoff-modal");
         const earlyEndModal = document.getElementById("early-end-modal");
         const celebrationModal = document.getElementById("celebration-modal");
-        let celebrationTimer = null;
         const shareHandoffState = { role: null, url: "" };
+        let settleShareUrlForModal = "";
         const url = new URL(window.location.href);
         const HASH_STATE_VERSION = 1;
         const SHAREABLE_STATE_KEYS = ["mode", "t", "cn", "chn", "p1", "p2", "d", "tt", "ct", "w", "src", "cs", "inv", "cr", "hf", "ev", "ee"];
@@ -1860,30 +1890,34 @@
 
         function closeCelebrationModal() {
             celebrationModal.classList.add("is-hidden");
-            if (celebrationTimer) {
-                clearTimeout(celebrationTimer);
-                celebrationTimer = null;
-            }
             triggerWinnerPreviewFlip();
         }
 
-        function openCelebrationModal() {
+        function openCelebrationModal(content = {}) {
+            const {
+                settleHeadline = "Result locked in",
+                betDateLabel = "",
+                creatorCardHtml = "",
+                challengerCardHtml = ""
+            } = content;
+            const titleEl = document.getElementById("celebration-title");
+            const dateEl = document.getElementById("celebration-date");
+            const matchupEl = document.getElementById("celebration-matchup");
+            const shareButtonEl = document.getElementById("celebration-close");
+            titleEl.textContent = settleHeadline;
+            dateEl.textContent = betDateLabel ? `Ended: ${betDateLabel}` : "";
+            matchupEl.innerHTML = `${creatorCardHtml}${challengerCardHtml}`;
+            shareButtonEl.innerHTML = shareActionLabel("Share results");
             celebrationModal.classList.remove("is-hidden");
-            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            if (celebrationTimer) {
-                clearTimeout(celebrationTimer);
-            }
-            celebrationTimer = setTimeout(() => {
-                closeCelebrationModal();
-            }, reduceMotion ? 900 : 2400);
+            triggerWinnerPreviewFlip(celebrationModal);
         }
 
-        function triggerWinnerPreviewFlip() {
+        function triggerWinnerPreviewFlip(root = app) {
             const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             if (reduceMotion) {
                 return;
             }
-            const winningCards = app.querySelectorAll(".competitor.is-winner");
+            const winningCards = root.querySelectorAll(".competitor.is-winner");
             if (!winningCards.length) {
                 return;
             }
@@ -2132,13 +2166,14 @@
             }
         });
         document.getElementById("celebration-close").addEventListener("click", () => {
-            trackBetsieEvent("betsie_settle_celebration", { action: "manual_close" });
+            trackBetsieEvent("betsie_settle_celebration", { action: "share_results" });
+            trackBetsieEvent("betsie_share_intent", { share_context: "settle_result" });
+            void shareCurrentLink(settleShareUrlForModal || window.location.href, { share_context: "settle_result" });
             closeCelebrationModal();
         });
         celebrationModal.addEventListener("click", (event) => {
             if (event.target === celebrationModal) {
-                trackBetsieEvent("betsie_settle_celebration", { action: "backdrop_close" });
-                closeCelebrationModal();
+                trackBetsieEvent("betsie_settle_celebration", { action: "backdrop_blocked" });
             }
         });
         document.getElementById("share-handoff-primary").addEventListener("click", async () => {
@@ -2225,7 +2260,7 @@
                 closeEarlyEndModal();
             }
             if (event.key === "Escape" && !celebrationModal.classList.contains("is-hidden")) {
-                closeCelebrationModal();
+                trackBetsieEvent("betsie_settle_celebration", { action: "escape_blocked" });
             }
         });
 
@@ -2763,6 +2798,28 @@
             const challengerWinnerClass = challengerIsWinner ? " is-winner" : "";
             const creatorLoserClass = creatorIsLoser ? " is-loser" : "";
             const challengerLoserClass = challengerIsLoser ? " is-loser" : "";
+            const creatorCardHtml = `
+                <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
+                    <div class="avatar creator flip-coin" aria-hidden="true">
+                        <span class="avatar-face front creator">${avatarLetters(creatorName, "Creator")}</span>
+                        <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
+                    </div>
+                    <div class="competitor-label">${escapeHtml(creatorName || "Creator")}</div>
+                    <div class="competitor-position">${escapeHtml(title || "-")}</div>
+                    <div class="competitor-quote">${trashTalk ? `"${escapeHtml(trashTalk)}"` : "\"No comment.\""}</div>
+                </article>
+            `;
+            const challengerCardHtml = `
+                <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
+                    <div class="avatar challenger flip-coin" aria-hidden="true">
+                        <span class="avatar-face front challenger">${avatarLetters(challengerName, "Challenger")}</span>
+                        <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
+                    </div>
+                    <div class="competitor-label">${escapeHtml(challengerName || "Challenger")}</div>
+                    <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
+                    <div class="competitor-quote">${challengerTrashTalk ? `"${escapeHtml(challengerTrashTalk)}"` : "\"No comment.\""}</div>
+                </article>
+            `;
             const settleHeadline = (() => {
                 if (noContest) {
                     return "No Contest!";
@@ -2778,12 +2835,6 @@
                 }
                 return "Deadline reached";
             })();
-            const escapedCreatorName = escapeHtml(creatorName || "Creator");
-            const escapedChallengerName = escapeHtml(challengerName || "Challenger");
-            const creatorAvatar = avatarLetters(creatorName, "Creator");
-            const challengerAvatar = avatarLetters(challengerName, "Challenger");
-            const escapedCreatorTrashTalk = escapeHtml(trashTalk);
-            const escapedChallengerTrashTalk = escapeHtml(challengerTrashTalk);
             const settleShareUrl = (() => {
                 const resultUrl = new URL(toCompressedHashUrl(window.location.href));
                 if (winner === "0") {
@@ -2799,6 +2850,7 @@
                 }
                 return resultUrl.toString();
             })();
+            settleShareUrlForModal = settleShareUrl;
             app.innerHTML = `
                 <div id="settle-receipt-capture">
                     <div class="brand-row"><span class="brand-label">Bet Receipt</span></div>
@@ -2806,24 +2858,8 @@
                     ${betDateLabel ? `<p class="subtitle" style="text-align: center; margin-top: 0; margin-bottom: 2px;">Bet ended: ${escapeHtml(betDateLabel)}</p>` : ""}
                     <p class="subtitle" style="text-align: center; margin-top: 4px; margin-bottom: 10px; line-height: 1;"><button id="save-results-pill" class="pill save-results-pill" type="button">${saveImageActionLabel("Download receipt")}</button></p>
                     <section class="matchup" aria-label="Final head to head">
-                        <article class="competitor${creatorWinnerClass}${creatorLoserClass}">
-                            <div class="avatar creator flip-coin" aria-hidden="true">
-                                <span class="avatar-face front creator">${creatorAvatar}</span>
-                                <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
-                            </div>
-                            <div class="competitor-label">${escapedCreatorName}</div>
-                            <div class="competitor-position">${escapeHtml(title || "-")}</div>
-                            <div class="competitor-quote">${trashTalk ? `"${escapedCreatorTrashTalk}"` : "\"No comment.\""}</div>
-                        </article>
-                        <article class="competitor${challengerWinnerClass}${challengerLoserClass}">
-                            <div class="avatar challenger flip-coin" aria-hidden="true">
-                                <span class="avatar-face front challenger">${challengerAvatar}</span>
-                                <span class="avatar-face back"><span class="winner-icon" aria-hidden="true">&#x1F3C6;</span></span>
-                            </div>
-                            <div class="competitor-label">${escapedChallengerName}</div>
-                            <div class="competitor-position">${escapeHtml(p2 || "-")}</div>
-                            <div class="competitor-quote">${challengerTrashTalk ? `"${escapedChallengerTrashTalk}"` : "\"No comment.\""}</div>
-                        </article>
+                        ${creatorCardHtml}
+                        ${challengerCardHtml}
                     </section>
                 </div>
                 <button id="share-result" class="cta" type="button">${shareActionLabel("Share this receipt")}</button>
@@ -2869,7 +2905,12 @@
             if (winner) {
                 trackBetsieEvent("betsie_settle_celebration", { action: "auto_open" });
                 requestAnimationFrame(() => {
-                    openCelebrationModal();
+                    openCelebrationModal({
+                        settleHeadline,
+                        betDateLabel,
+                        creatorCardHtml,
+                        challengerCardHtml
+                    });
                 });
             }
         }
